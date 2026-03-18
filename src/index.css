@@ -45,7 +45,7 @@
     --nav-bg: 220 15% 25%;
     --nav-fg: 0 0% 95%;
 
-    --hero-overlay: linear-gradient(135deg, hsla(260, 30%, 25%, 0.85), hsla(348, 50%, 30%, 0.75));
+    --hero-overlay: linear-gradient(135deg, hsla(220, 30%, 20%, 0.85), hsla(213, 60%, 30%, 0.75));
 
     --font-display: 'Playfair Display', serif;
     --font-body: 'Inter', sans-serif;
