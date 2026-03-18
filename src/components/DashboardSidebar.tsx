@@ -75,12 +75,24 @@ const sections: SidebarSection[] = [
 interface DashboardSidebarProps {
   activeItem: string;
   onItemClick: (id: string) => void;
+  isAdmin?: boolean;
 }
 
-const DashboardSidebar = ({ activeItem, onItemClick }: DashboardSidebarProps) => {
+const DashboardSidebar = ({ activeItem, onItemClick, isAdmin }: DashboardSidebarProps) => {
   return (
     <aside className="lms-sidebar w-60 min-h-screen overflow-y-auto flex-shrink-0">
       <div className="py-4">
+        {isAdmin && (
+          <div className="mb-2">
+            <div className="lms-sidebar-section px-4 py-2">Administration</div>
+            <div
+              onClick={() => onItemClick("admin-panel")}
+              className={cn("lms-sidebar-item", activeItem === "admin-panel" && "active")}
+            >
+              Admin Control Panel
+            </div>
+          </div>
+        )}
         {sections.map((section) => (
           <div key={section.title} className="mb-2">
             <div className="lms-sidebar-section px-4 py-2">{section.title}</div>
