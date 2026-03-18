@@ -6,9 +6,9 @@ const Footer = () => (
       <div className="space-y-1">
         <a href="#" className="block text-primary hover:underline">LMS Help Center</a>
         <a href="#" className="block text-primary hover:underline">News</a>
-        <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> lms@uet.edu.pk</span>
+        <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> lms@ngcad.org</span>
       </div>
-      <p>Copyright © University of Engineering and Technology Lahore</p>
+      <p>Copyright © Next Gen Cad Academy</p>
     </div>
   </footer>
 );

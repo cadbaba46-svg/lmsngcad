@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
@@ -13,8 +12,11 @@ const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"login" | "forgot" | "otp" | "newpass">("login");
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,19 +30,18 @@ const Login = () => {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     setLoading(false);
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Check your email to confirm your account!");
+      toast.success("A password reset link has been sent to your email.");
+      setMode("login");
     }
   };
 
@@ -48,14 +49,10 @@ const Login = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <Tabs defaultValue="login" className="w-full max-w-md">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Log in</TabsTrigger>
-            <TabsTrigger value="signup">Sign up</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="login">
-            <form onSubmit={handleLogin} className="space-y-4 mt-4">
+        <div className="w-full max-w-md">
+          {mode === "login" && (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <h2 className="text-2xl font-bold text-foreground text-center mb-4">Log in</h2>
               <div className="space-y-2">
                 <Label htmlFor="login-email">Email</Label>
                 <Input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -68,31 +65,42 @@ const Login = () => {
                 <Button type="submit" disabled={loading}>
                   {loading ? "Logging in..." : "Log in"}
                 </Button>
-                <a href="#" className="text-sm text-primary hover:underline">Reset Password</a>
+                <button
+                  type="button"
+                  onClick={() => setMode("forgot")}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Forgot Password?
+                </button>
               </div>
             </form>
-          </TabsContent>
+          )}
 
-          <TabsContent value="signup">
-            <form onSubmit={handleSignUp} className="space-y-4 mt-4">
+          {mode === "forgot" && (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <h2 className="text-2xl font-bold text-foreground text-center mb-4">Reset Password</h2>
+              <p className="text-sm text-muted-foreground text-center">
+                Enter your email address and we'll send you a password reset link.
+              </p>
               <div className="space-y-2">
-                <Label htmlFor="signup-name">Full Name</Label>
-                <Input id="signup-name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                <Label htmlFor="reset-email">Email</Label>
+                <Input id="reset-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
-                <Input id="signup-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <div className="flex items-center justify-between">
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Sending..." : "Send Reset Link"}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setMode("login")}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Back to Login
+                </button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
-                <Input id="signup-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </div>
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Creating account..." : "Sign up"}
-              </Button>
             </form>
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </main>
       <Footer />
     </div>

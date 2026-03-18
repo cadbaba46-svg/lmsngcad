@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import OfferedSubjectsPanel from "@/components/OfferedSubjectsPanel";
-import universityLogo from "@/assets/university-logo.png";
+import AdminPanel from "@/components/AdminPanel";
+import ngcadLogo from "@/assets/ngcad-logo.png";
 import { LogOut } from "lucide-react";
 
 const Dashboard = () => {
@@ -12,6 +13,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [activeItem, setActiveItem] = useState("offered-subjects");
   const [profileName, setProfileName] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -29,6 +31,12 @@ const Dashboard = () => {
         .then(({ data }) => {
           if (data?.full_name) setProfileName(data.full_name);
         });
+
+      // Check admin role
+      supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
+        setIsAdmin(data === true);
+        if (data === true) setActiveItem("admin-panel");
+      });
     }
   }, [user]);
 
@@ -39,6 +47,8 @@ const Dashboard = () => {
 
   const renderContent = () => {
     switch (activeItem) {
+      case "admin-panel":
+        return isAdmin ? <AdminPanel /> : null;
       case "offered-subjects":
         return <OfferedSubjectsPanel />;
       default:
@@ -69,9 +79,9 @@ const Dashboard = () => {
       <div className="flex flex-1">
         <div className="flex flex-col">
           <div className="lms-sidebar flex items-center justify-center py-4 px-4">
-            <img src={universityLogo} alt="University Logo" className="h-20 w-20 object-contain" />
+            <img src={ngcadLogo} alt="Next Gen Cad Academy" className="h-20 w-20 object-contain" />
           </div>
-          <DashboardSidebar activeItem={activeItem} onItemClick={setActiveItem} />
+          <DashboardSidebar activeItem={activeItem} onItemClick={setActiveItem} isAdmin={isAdmin} />
         </div>
         <main className="flex-1 overflow-auto">{renderContent()}</main>
       </div>

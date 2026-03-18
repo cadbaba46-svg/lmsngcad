@@ -1,14 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
-import universityLogo from "@/assets/university-logo.png";
+import ngcadLogo from "@/assets/ngcad-logo.png";
 
 const navLinks = [
   { label: "Home", to: "/" },
-  { label: "Degree Verification", to: "#" },
   { label: "LMS Help", to: "#" },
   { label: "Contact us", to: "#" },
   { label: "Support", to: "#" },
   { label: "Downloads", to: "#" },
-  { label: "Alumni Registration", to: "#" },
 ];
 
 interface NavbarProps {
@@ -23,7 +21,7 @@ const Navbar = ({ isLoggedIn = false, userName }: NavbarProps) => {
     <header className="border-b border-border bg-card shadow-sm">
       <div className="flex items-center gap-4 px-4 py-2">
         <Link to="/" className="flex items-center gap-2">
-          <img src={universityLogo} alt="University Logo" className="h-12 w-12 object-contain" />
+          <img src={ngcadLogo} alt="Next Gen Cad Academy" className="h-12 w-12 object-contain" />
         </Link>
         <nav className="hidden md:flex items-center gap-1 flex-wrap">
           {navLinks.map((link) => (
