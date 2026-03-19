@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      courses: {
+        Row: {
+          course_content: Json | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          total_weeks: number
+          updated_at: string
+        }
+        Insert: {
+          course_content?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          total_weeks?: number
+          updated_at?: string
+        }
+        Update: {
+          course_content?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          total_weeks?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      enrollments: {
+        Row: {
+          attendance: Json | null
+          challan_generated_at: string | null
+          challan_paid: boolean
+          challan_paid_at: string | null
+          course_id: string
+          created_at: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attendance?: Json | null
+          challan_generated_at?: string | null
+          challan_paid?: boolean
+          challan_paid_at?: string | null
+          course_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attendance?: Json | null
+          challan_generated_at?: string | null
+          challan_paid?: boolean
+          challan_paid_at?: string | null
+          course_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
