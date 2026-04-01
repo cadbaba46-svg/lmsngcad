@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -18,7 +17,7 @@ interface Course {
 const OfferedSubjectsPanel = () => {
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
-  const [enrolledIds, setEnrolledIds] = useState<Set<string>>(new Set());
+  const [enrolledCourseId, setEnrolledCourseId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
 
@@ -27,13 +26,11 @@ const OfferedSubjectsPanel = () => {
       setLoading(true);
       const [coursesRes, enrollmentsRes] = await Promise.all([
         supabase.from("courses").select("*").eq("is_active", true),
-        user ? supabase.from("enrollments").select("course_id").eq("user_id", user.id) : Promise.resolve({ data: [] }),
+        user ? supabase.from("enrollments").select("course_id").eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
       ]);
 
       if (coursesRes.data) setCourses(coursesRes.data as Course[]);
-      if (enrollmentsRes.data) {
-        setEnrolledIds(new Set((enrollmentsRes.data as any[]).map((e: any) => e.course_id)));
-      }
+      if (enrollmentsRes.data) setEnrolledCourseId(enrollmentsRes.data.course_id);
       setLoading(false);
     };
     fetchData();
@@ -41,6 +38,10 @@ const OfferedSubjectsPanel = () => {
 
   const handleEnroll = async (courseId: string) => {
     if (!user) return;
+    if (enrolledCourseId) {
+      toast.error("You can only enroll in one course. You are already enrolled.");
+      return;
+    }
     setEnrolling(courseId);
 
     const { error } = await supabase.from("enrollments").insert({
@@ -51,10 +52,14 @@ const OfferedSubjectsPanel = () => {
     });
 
     if (error) {
-      toast.error(error.message);
+      if (error.message.includes("enrollments_user_unique")) {
+        toast.error("You can only enroll in one course.");
+      } else {
+        toast.error(error.message);
+      }
     } else {
       toast.success("Enrolled! Your fee challan has been generated. Please pay to activate the course.");
-      setEnrolledIds((prev) => new Set(prev).add(courseId));
+      setEnrolledCourseId(courseId);
     }
     setEnrolling(null);
   };
@@ -77,10 +82,10 @@ const OfferedSubjectsPanel = () => {
         Note: Upon clicking 'Enroll now', the system will automatically generate your fee challan. Your course will be activated once payment is confirmed.
       </p>
 
-      {/* Course Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {courses.map((course) => {
-          const isEnrolled = enrolledIds.has(course.id);
+          const isEnrolled = enrolledCourseId === course.id;
+          const hasOtherEnrollment = enrolledCourseId !== null && !isEnrolled;
           return (
             <div key={course.id} className="bg-card border border-border rounded-lg p-5 flex flex-col space-y-3">
               <h3 className="text-lg font-bold text-foreground">{course.name}</h3>
@@ -95,10 +100,10 @@ const OfferedSubjectsPanel = () => {
                 ) : (
                   <Button
                     size="sm"
-                    disabled={enrolling === course.id}
+                    disabled={enrolling === course.id || hasOtherEnrollment}
                     onClick={() => handleEnroll(course.id)}
                   >
-                    {enrolling === course.id ? "Enrolling..." : "Enroll now"}
+                    {hasOtherEnrollment ? "Already enrolled in another" : enrolling === course.id ? "Enrolling..." : "Enroll now"}
                   </Button>
                 )}
               </div>

@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Copy, Users, BookOpen, Settings } from "lucide-react";
+import { UserPlus, Copy, Users, BookOpen, Settings, GraduationCap } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Profile {
   id: string;
@@ -14,6 +15,9 @@ interface Profile {
   department: string | null;
   semester: string | null;
   roll_number: string | null;
+  father_name: string | null;
+  phone: string | null;
+  cnic: string | null;
   created_at: string;
 }
 
@@ -30,18 +34,26 @@ interface Course {
 const AdminPanel = () => {
   const [users, setUsers] = useState<Profile[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [createdEmail, setCreatedEmail] = useState("");
+  const [createdRollNumber, setCreatedRollNumber] = useState("");
 
   // User form
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [fatherName, setFatherName] = useState("");
   const [department, setDepartment] = useState("");
   const [semester, setSemester] = useState("");
   const [rollNumber, setRollNumber] = useState("");
+  const [phone, setPhone] = useState("");
+  const [cnic, setCnic] = useState("");
+  const [userRole, setUserRole] = useState<"user" | "teacher">("user");
 
   // Course edit
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -55,9 +67,13 @@ const AdminPanel = () => {
   const [newCourseWeeks, setNewCourseWeeks] = useState("12");
   const [newCourseContent, setNewCourseContent] = useState("");
 
+  // Teacher assignment
+  const [assignTeacherId, setAssignTeacherId] = useState("");
+  const [assignCourseId, setAssignCourseId] = useState("");
+
   const fetchUsers = async () => {
     const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-    setUsers(data || []);
+    setUsers((data || []) as unknown as Profile[]);
   };
 
   const fetchCourses = async () => {
@@ -65,9 +81,35 @@ const AdminPanel = () => {
     setCourses((data || []) as Course[]);
   };
 
+  const fetchTeachers = async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id, role");
+    const teacherIds = (roles || []).filter((r) => (r.role as string) === "teacher").map((r) => r.user_id);
+    if (teacherIds.length === 0) { setTeachers([]); return; }
+    const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", teacherIds);
+    setTeachers(profiles || []);
+  };
+
+  const fetchEnrollments = async () => {
+    const { data } = await supabase.from("enrollments").select("*, courses(name)");
+    if (!data) { setEnrollments([]); return; }
+    const userIds = data.map((e) => e.user_id);
+    const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, roll_number").in("user_id", userIds);
+    const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p]));
+    setEnrollments(data.map((e) => ({ ...e, profile: profileMap[e.user_id] })));
+  };
+
+  const fetchAssignments = async () => {
+    const { data } = await (supabase as any).from("teacher_assignments").select("*, courses(name)");
+    if (!data) { setAssignments([]); return; }
+    const teacherIds = data.map((a: any) => a.teacher_id);
+    const { data: profiles } = await supabase.from("profiles").select("user_id, full_name").in("user_id", teacherIds);
+    const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p]));
+    setAssignments(data.map((a: any) => ({ ...a, teacher_name: profileMap[a.teacher_id]?.full_name })));
+  };
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchUsers(), fetchCourses()]).then(() => setLoading(false));
+    Promise.all([fetchUsers(), fetchCourses(), fetchTeachers(), fetchEnrollments(), fetchAssignments()]).then(() => setLoading(false));
   }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -79,7 +121,7 @@ const AdminPanel = () => {
     setCreating(true);
     try {
       const res = await supabase.functions.invoke("create-user", {
-        body: { email, full_name: fullName, department, semester, roll_number: rollNumber },
+        body: { email, full_name: fullName, department, semester, roll_number: rollNumber, father_name: fatherName, phone, cnic, role: userRole },
       });
 
       if (res.error) {
@@ -88,13 +130,11 @@ const AdminPanel = () => {
         const { password } = res.data;
         setGeneratedPassword(password);
         setCreatedEmail(email);
+        setCreatedRollNumber(rollNumber);
         toast.success("User created successfully!");
-        setEmail("");
-        setFullName("");
-        setDepartment("");
-        setSemester("");
-        setRollNumber("");
+        setEmail(""); setFullName(""); setFatherName(""); setDepartment(""); setSemester(""); setRollNumber(""); setPhone(""); setCnic(""); setUserRole("user");
         fetchUsers();
+        fetchTeachers();
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to create user");
@@ -103,7 +143,7 @@ const AdminPanel = () => {
   };
 
   const copyCredentials = () => {
-    const text = `Email: ${createdEmail}\nUsername/Roll No: ${rollNumber || "N/A"}\nPassword: ${generatedPassword}`;
+    const text = `Email: ${createdEmail}\nUsername/Roll No: ${createdRollNumber || "N/A"}\nPassword: ${generatedPassword}`;
     navigator.clipboard.writeText(text);
     toast.success("Credentials copied to clipboard!");
   };
@@ -125,14 +165,8 @@ const AdminPanel = () => {
         price: parseFloat(coursePrice) || 0,
       })
       .eq("id", editingCourse.id);
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Course updated!");
-      setEditingCourse(null);
-      fetchCourses();
-    }
+    if (error) toast.error(error.message);
+    else { toast.success("Course updated!"); setEditingCourse(null); fetchCourses(); }
   };
 
   const handleAddCourse = async (e: React.FormEvent) => {
@@ -144,19 +178,32 @@ const AdminPanel = () => {
       total_weeks: parseInt(newCourseWeeks) || 12,
       course_content: newCourseContent.split("\n").filter(Boolean),
     });
-
-    if (error) {
-      toast.error(error.message);
-    } else {
+    if (error) toast.error(error.message);
+    else {
       toast.success("Course added!");
       setShowAddCourse(false);
-      setNewCourseName("");
-      setNewCoursePrice("");
-      setNewCourseDesc("");
-      setNewCourseWeeks("12");
-      setNewCourseContent("");
+      setNewCourseName(""); setNewCoursePrice(""); setNewCourseDesc(""); setNewCourseWeeks("12"); setNewCourseContent("");
       fetchCourses();
     }
+  };
+
+  const handleAssignTeacher = async () => {
+    if (!assignTeacherId || !assignCourseId) { toast.error("Select teacher and course"); return; }
+    const { error } = await (supabase as any).from("teacher_assignments").insert({ teacher_id: assignTeacherId, course_id: assignCourseId });
+    if (error) {
+      if (error.message.includes("duplicate")) toast.error("Teacher already assigned to this course");
+      else toast.error(error.message);
+    } else {
+      toast.success("Teacher assigned!");
+      setAssignTeacherId(""); setAssignCourseId("");
+      fetchAssignments();
+    }
+  };
+
+  const handleRemoveAssignment = async (id: string) => {
+    await (supabase as any).from("teacher_assignments").delete().eq("id", id);
+    toast.success("Assignment removed");
+    fetchAssignments();
   };
 
   return (
@@ -166,16 +213,18 @@ const AdminPanel = () => {
       </h2>
 
       <Tabs defaultValue="users">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="users" className="gap-2"><UserPlus className="h-4 w-4" /> Users</TabsTrigger>
+          <TabsTrigger value="students" className="gap-2"><GraduationCap className="h-4 w-4" /> Students</TabsTrigger>
+          <TabsTrigger value="teachers" className="gap-2"><Users className="h-4 w-4" /> Teachers</TabsTrigger>
           <TabsTrigger value="courses" className="gap-2"><BookOpen className="h-4 w-4" /> Courses</TabsTrigger>
         </TabsList>
 
+        {/* Users Tab */}
         <TabsContent value="users" className="space-y-4 mt-4">
           <div className="flex justify-end">
             <Button onClick={() => { setShowForm(!showForm); setGeneratedPassword(""); }} className="gap-2">
-              <UserPlus className="h-4 w-4" />
-              {showForm ? "Cancel" : "Create User"}
+              <UserPlus className="h-4 w-4" /> {showForm ? "Cancel" : "Create User"}
             </Button>
           </div>
 
@@ -192,6 +241,18 @@ const AdminPanel = () => {
                   <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
+                  <Label>Father Name</Label>
+                  <Input value={fatherName} onChange={(e) => setFatherName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone Number</Label>
+                  <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 03001234567" />
+                </div>
+                <div className="space-y-2">
+                  <Label>CNIC Number</Label>
+                  <Input value={cnic} onChange={(e) => setCnic(e.target.value)} placeholder="e.g. 35201-1234567-1" />
+                </div>
+                <div className="space-y-2">
                   <Label>Department</Label>
                   <Input value={department} onChange={(e) => setDepartment(e.target.value)} />
                 </div>
@@ -200,8 +261,18 @@ const AdminPanel = () => {
                   <Input value={semester} onChange={(e) => setSemester(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Roll Number (also used as Username)</Label>
+                  <Label>Roll Number (Username)</Label>
                   <Input value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} placeholder="e.g. NGCAD-2025-001" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Select value={userRole} onValueChange={(v) => setUserRole(v as "user" | "teacher")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">Student</SelectItem>
+                      <SelectItem value="teacher">Teacher</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-end">
                   <Button type="submit" disabled={creating} className="w-full">
@@ -214,7 +285,7 @@ const AdminPanel = () => {
                 <div className="bg-muted border border-border rounded-lg p-4 space-y-2">
                   <p className="text-sm font-semibold text-foreground">User Created — Credentials:</p>
                   <p className="text-sm text-muted-foreground">Email: <span className="font-mono text-foreground">{createdEmail}</span></p>
-                  {rollNumber && <p className="text-sm text-muted-foreground">Username/Roll No: <span className="font-mono text-foreground">{rollNumber}</span></p>}
+                  {createdRollNumber && <p className="text-sm text-muted-foreground">Username/Roll No: <span className="font-mono text-foreground">{createdRollNumber}</span></p>}
                   <p className="text-sm text-muted-foreground">Password: <span className="font-mono text-foreground">{generatedPassword}</span></p>
                   <Button variant="outline" size="sm" onClick={copyCredentials} className="gap-2">
                     <Copy className="h-3 w-3" /> Copy Credentials
@@ -234,14 +305,15 @@ const AdminPanel = () => {
                     <th className="text-left p-3 font-medium text-muted-foreground">Department</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Semester</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Roll Number</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Phone</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Created</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Loading...</td></tr>
+                    <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Loading...</td></tr>
                   ) : users.length === 0 ? (
-                    <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No users found.</td></tr>
+                    <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No users found.</td></tr>
                   ) : (
                     users.map((u) => (
                       <tr key={u.id} className="border-t border-border hover:bg-muted/50">
@@ -249,6 +321,7 @@ const AdminPanel = () => {
                         <td className="p-3 text-muted-foreground">{u.department || "—"}</td>
                         <td className="p-3 text-muted-foreground">{u.semester || "—"}</td>
                         <td className="p-3 text-muted-foreground">{u.roll_number || "—"}</td>
+                        <td className="p-3 text-muted-foreground">{u.phone || "—"}</td>
                         <td className="p-3 text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
                       </tr>
                     ))
@@ -259,6 +332,138 @@ const AdminPanel = () => {
           </div>
         </TabsContent>
 
+        {/* Students Tab */}
+        <TabsContent value="students" className="space-y-4 mt-4">
+          <h3 className="text-lg font-semibold text-foreground">Student Enrollments & Records</h3>
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted">
+                    <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Roll Number</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Course</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Payment</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Attendance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enrollments.length === 0 ? (
+                    <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No enrollments.</td></tr>
+                  ) : (
+                    enrollments.map((e: any) => {
+                      const att = Array.isArray(e.attendance) ? e.attendance : [];
+                      const present = att.filter((a: any) => a.status === "present").length;
+                      return (
+                        <tr key={e.id} className="border-t border-border hover:bg-muted/50">
+                          <td className="p-3 text-foreground">{e.profile?.full_name || "—"}</td>
+                          <td className="p-3 text-muted-foreground">{e.profile?.roll_number || "—"}</td>
+                          <td className="p-3 text-muted-foreground">{e.courses?.name || "—"}</td>
+                          <td className="p-3">{e.challan_paid ? <span className="text-green-600 font-medium">Paid</span> : <span className="text-destructive font-medium">Unpaid</span>}</td>
+                          <td className="p-3 text-muted-foreground capitalize">{e.status}</td>
+                          <td className="p-3 text-muted-foreground">{present}/{att.length} present</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Teachers Tab */}
+        <TabsContent value="teachers" className="space-y-4 mt-4">
+          <h3 className="text-lg font-semibold text-foreground">Teacher Management</h3>
+
+          {/* Assign teacher to course */}
+          <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+            <h4 className="font-medium text-foreground">Assign Teacher to Course</h4>
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="space-y-1">
+                <Label className="text-xs">Teacher</Label>
+                <Select value={assignTeacherId} onValueChange={setAssignTeacherId}>
+                  <SelectTrigger className="w-52"><SelectValue placeholder="Select teacher" /></SelectTrigger>
+                  <SelectContent>
+                    {teachers.map((t) => (
+                      <SelectItem key={t.user_id} value={t.user_id}>{t.full_name || t.user_id}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Course</Label>
+                <Select value={assignCourseId} onValueChange={setAssignCourseId}>
+                  <SelectTrigger className="w-52"><SelectValue placeholder="Select course" /></SelectTrigger>
+                  <SelectContent>
+                    {courses.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleAssignTeacher} size="sm">Assign</Button>
+            </div>
+          </div>
+
+          {/* Current assignments */}
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted">
+                  <th className="text-left p-3 font-medium text-muted-foreground">Teacher</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Course</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {assignments.length === 0 ? (
+                  <tr><td colSpan={3} className="p-6 text-center text-muted-foreground">No assignments.</td></tr>
+                ) : (
+                  assignments.map((a: any) => (
+                    <tr key={a.id} className="border-t border-border hover:bg-muted/50">
+                      <td className="p-3 text-foreground">{a.teacher_name || "—"}</td>
+                      <td className="p-3 text-muted-foreground">{a.courses?.name || "—"}</td>
+                      <td className="p-3">
+                        <Button variant="destructive" size="sm" onClick={() => handleRemoveAssignment(a.id)}>Remove</Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Teacher list */}
+          <h4 className="font-medium text-foreground mt-4">All Teachers</h4>
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted">
+                  <th className="text-left p-3 font-medium text-muted-foreground">Name</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Department</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Phone</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teachers.length === 0 ? (
+                  <tr><td colSpan={3} className="p-6 text-center text-muted-foreground">No teachers found.</td></tr>
+                ) : (
+                  teachers.map((t: any) => (
+                    <tr key={t.id} className="border-t border-border hover:bg-muted/50">
+                      <td className="p-3 text-foreground">{t.full_name || "—"}</td>
+                      <td className="p-3 text-muted-foreground">{t.department || "—"}</td>
+                      <td className="p-3 text-muted-foreground">{t.phone || "—"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+
+        {/* Courses Tab */}
         <TabsContent value="courses" className="space-y-4 mt-4">
           <div className="flex justify-end">
             <Button onClick={() => setShowAddCourse(!showAddCourse)} className="gap-2">
@@ -288,21 +493,13 @@ const AdminPanel = () => {
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label>Course Content (one item per line)</Label>
-                  <textarea
-                    className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground min-h-[100px]"
-                    value={newCourseContent}
-                    onChange={(e) => setNewCourseContent(e.target.value)}
-                    placeholder="Advanced 2D Geometric Construction&#10;Mechanical Drafting Standards"
-                  />
+                  <textarea className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground min-h-[100px]" value={newCourseContent} onChange={(e) => setNewCourseContent(e.target.value)} />
                 </div>
-                <div>
-                  <Button type="submit">Add Course</Button>
-                </div>
+                <div><Button type="submit">Add Course</Button></div>
               </form>
             </div>
           )}
 
-          {/* Edit Course Modal */}
           {editingCourse && (
             <div className="bg-card border border-primary/30 rounded-lg p-6 space-y-4">
               <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -319,11 +516,7 @@ const AdminPanel = () => {
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label>Course Content (one item per line)</Label>
-                  <textarea
-                    className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground min-h-[120px]"
-                    value={courseContent}
-                    onChange={(e) => setCourseContent(e.target.value)}
-                  />
+                  <textarea className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground min-h-[120px]" value={courseContent} onChange={(e) => setCourseContent(e.target.value)} />
                 </div>
               </div>
               <div className="flex gap-2">
@@ -333,7 +526,6 @@ const AdminPanel = () => {
             </div>
           )}
 
-          {/* Courses List */}
           <div className="grid gap-3">
             {courses.map((course) => (
               <div key={course.id} className="bg-card border border-border rounded-lg p-4 flex items-center justify-between">

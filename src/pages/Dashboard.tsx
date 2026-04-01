@@ -5,7 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import OfferedSubjectsPanel from "@/components/OfferedSubjectsPanel";
 import CurrentCoursesPanel from "@/components/CurrentCoursesPanel";
+import StudentProfilePanel from "@/components/StudentProfilePanel";
 import AdminPanel from "@/components/AdminPanel";
+import TeacherCoursesPanel from "@/components/TeacherCoursesPanel";
+import TeacherStudentsPanel from "@/components/TeacherStudentsPanel";
+import TeacherAttendancePanel from "@/components/TeacherAttendancePanel";
 import ngcadLogo from "@/assets/ngcad-logo.png";
 import { LogOut } from "lucide-react";
 
@@ -15,6 +19,7 @@ const Dashboard = () => {
   const [activeItem, setActiveItem] = useState("offered-subjects");
   const [profileName, setProfileName] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTeacher, setIsTeacher] = useState(false);
   const [history, setHistory] = useState<string[]>(["offered-subjects"]);
 
   useEffect(() => {
@@ -29,22 +34,30 @@ const Dashboard = () => {
         .from("profiles")
         .select("full_name, roll_number")
         .eq("user_id", user.id)
-        .single()
+        .maybeSingle()
         .then(({ data }) => {
           if (data?.full_name) setProfileName(data.roll_number || data.full_name);
         });
 
-      supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
-        setIsAdmin(data === true);
-        if (data === true) {
+      // Check roles
+      supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data }) => {
+        const roles = (data || []).map((r) => r.role as string);
+        const admin = roles.includes("admin");
+        const teacher = roles.includes("teacher");
+        setIsAdmin(admin);
+        setIsTeacher(teacher);
+
+        if (admin) {
           setActiveItem("admin-panel");
           setHistory(["admin-panel"]);
+        } else if (teacher) {
+          setActiveItem("teacher-courses");
+          setHistory(["teacher-courses"]);
         }
       });
     }
   }, [user]);
 
-  // Handle browser back button - navigate within dashboard instead of leaving
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
@@ -54,13 +67,11 @@ const Dashboard = () => {
           setActiveItem(newHistory[newHistory.length - 1]);
           return newHistory;
         }
-        // If at root of dashboard history, push state to prevent leaving
         window.history.pushState({ dashboard: true }, "");
         return prev;
       });
     };
 
-    // Push initial state
     window.history.pushState({ dashboard: true }, "");
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -85,6 +96,14 @@ const Dashboard = () => {
         return <OfferedSubjectsPanel />;
       case "current-courses":
         return <CurrentCoursesPanel />;
+      case "student-profile":
+        return <StudentProfilePanel />;
+      case "teacher-courses":
+        return <TeacherCoursesPanel />;
+      case "teacher-students":
+        return <TeacherStudentsPanel />;
+      case "teacher-attendance":
+        return <TeacherAttendancePanel />;
       default:
         return (
           <div className="p-6 text-muted-foreground flex items-center justify-center min-h-[300px]">
@@ -116,7 +135,7 @@ const Dashboard = () => {
           <div className="lms-sidebar flex items-center justify-center py-4 px-4">
             <img src={ngcadLogo} alt="Next Gen Cad Academy" className="h-20 w-20 object-contain" />
           </div>
-          <DashboardSidebar activeItem={activeItem} onItemClick={handleItemClick} isAdmin={isAdmin} />
+          <DashboardSidebar activeItem={activeItem} onItemClick={handleItemClick} isAdmin={isAdmin} isTeacher={isTeacher} />
         </div>
         <main className="flex-1 overflow-auto">{renderContent()}</main>
       </div>
