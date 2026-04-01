@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Check } from "lucide-react";
 
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 20) + 1;
@@ -23,27 +23,34 @@ const Login = () => {
   const [mode, setMode] = useState<"login" | "forgot">("login");
   const [captcha, setCaptcha] = useState(generateCaptcha);
   const [captchaInput, setCaptchaInput] = useState("");
+  const [captchaVerified, setCaptchaVerified] = useState(false);
 
   const refreshCaptcha = useCallback(() => {
     setCaptcha(generateCaptcha());
     setCaptchaInput("");
+    setCaptchaVerified(false);
   }, []);
+
+  const verifyCaptcha = () => {
+    if (parseInt(captchaInput) === captcha.answer) {
+      setCaptchaVerified(true);
+      toast.success("CAPTCHA verified!");
+    } else {
+      toast.error("Incorrect answer. Try again.");
+      refreshCaptcha();
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (parseInt(captchaInput) !== captcha.answer) {
-      toast.error("Incorrect CAPTCHA answer. Please try again.");
-      refreshCaptcha();
+    if (!captchaVerified) {
+      toast.error("Please verify the CAPTCHA first.");
       return;
     }
-
     setLoading(true);
 
     try {
       let email = identifier;
-
-      // If not an email, resolve via edge function
       if (!identifier.includes("@")) {
         const { data, error } = await supabase.functions.invoke("login-by-username", {
           body: { identifier, password },
@@ -73,15 +80,14 @@ const Login = () => {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (parseInt(captchaInput) !== captcha.answer) {
-      toast.error("Incorrect CAPTCHA answer. Please try again.");
-      refreshCaptcha();
+    if (!captchaVerified) {
+      toast.error("Please verify the CAPTCHA first.");
       return;
     }
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("reset-by-username", {
+      const { error } = await supabase.functions.invoke("reset-by-username", {
         body: {
           identifier,
           redirect_to: `${window.location.origin}/reset-password`,
@@ -101,6 +107,39 @@ const Login = () => {
     setLoading(false);
     refreshCaptcha();
   };
+
+  const CaptchaBlock = () => (
+    <div className="bg-muted border border-border rounded-lg p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-semibold">Security Check</Label>
+        <button type="button" onClick={refreshCaptcha} className="text-muted-foreground hover:text-foreground transition-colors">
+          <RefreshCw className="h-4 w-4" />
+        </button>
+      </div>
+      <p className="text-lg font-mono font-bold text-foreground tracking-wider">{captcha.question}</p>
+      <div className="flex gap-2">
+        <Input
+          type="number"
+          placeholder="Your answer"
+          value={captchaInput}
+          onChange={(e) => { setCaptchaInput(e.target.value); setCaptchaVerified(false); }}
+          disabled={captchaVerified}
+          required
+        />
+        <Button
+          type="button"
+          variant={captchaVerified ? "default" : "outline"}
+          size="sm"
+          onClick={verifyCaptcha}
+          disabled={captchaVerified || !captchaInput}
+          className={captchaVerified ? "bg-green-600 hover:bg-green-700 gap-1" : "gap-1"}
+        >
+          <Check className="h-4 w-4" />
+          {captchaVerified ? "Verified" : "Check"}
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -126,26 +165,10 @@ const Login = () => {
                 <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
 
-              {/* CAPTCHA */}
-              <div className="bg-muted border border-border rounded-lg p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold">Security Check</Label>
-                  <button type="button" onClick={refreshCaptcha} className="text-muted-foreground hover:text-foreground transition-colors">
-                    <RefreshCw className="h-4 w-4" />
-                  </button>
-                </div>
-                <p className="text-lg font-mono font-bold text-foreground tracking-wider">{captcha.question}</p>
-                <Input
-                  type="number"
-                  placeholder="Your answer"
-                  value={captchaInput}
-                  onChange={(e) => setCaptchaInput(e.target.value)}
-                  required
-                />
-              </div>
+              <CaptchaBlock />
 
               <div className="flex items-center justify-between">
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading || !captchaVerified} className={!captchaVerified ? "opacity-50" : ""}>
                   {loading ? "Logging in..." : "Log in"}
                 </Button>
                 <button
@@ -177,26 +200,10 @@ const Login = () => {
                 />
               </div>
 
-              {/* CAPTCHA */}
-              <div className="bg-muted border border-border rounded-lg p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold">Security Check</Label>
-                  <button type="button" onClick={refreshCaptcha} className="text-muted-foreground hover:text-foreground transition-colors">
-                    <RefreshCw className="h-4 w-4" />
-                  </button>
-                </div>
-                <p className="text-lg font-mono font-bold text-foreground tracking-wider">{captcha.question}</p>
-                <Input
-                  type="number"
-                  placeholder="Your answer"
-                  value={captchaInput}
-                  onChange={(e) => setCaptchaInput(e.target.value)}
-                  required
-                />
-              </div>
+              <CaptchaBlock />
 
               <div className="flex items-center justify-between">
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading || !captchaVerified} className={!captchaVerified ? "opacity-50" : ""}>
                   {loading ? "Sending..." : "Send Reset Link"}
                 </Button>
                 <button

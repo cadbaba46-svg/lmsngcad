@@ -5,7 +5,7 @@ interface SidebarSection {
   items: { label: string; id: string }[];
 }
 
-const sections: SidebarSection[] = [
+const studentSections: SidebarSection[] = [
   {
     title: "Academic Calendar",
     items: [
@@ -17,16 +17,8 @@ const sections: SidebarSection[] = [
     ],
   },
   {
-    title: "Hostel",
-    items: [
-      { label: "Hostel Cancel", id: "hostel-cancel" },
-      { label: "Hostel Admission", id: "hostel-admission" },
-      { label: "Hostel Comments", id: "hostel-comments" },
-    ],
-  },
-  {
     title: "Curriculum Design",
-    items: [{ label: "Thesis Track", id: "thesis-track" }],
+    items: [{ label: "Lab Report Track", id: "lab-report-track" }],
   },
   {
     title: "Results",
@@ -72,13 +64,27 @@ const sections: SidebarSection[] = [
   },
 ];
 
+const teacherSections: SidebarSection[] = [
+  {
+    title: "Course Management",
+    items: [
+      { label: "My Courses", id: "teacher-courses" },
+      { label: "Student Details", id: "teacher-students" },
+      { label: "Attendance", id: "teacher-attendance" },
+    ],
+  },
+];
+
 interface DashboardSidebarProps {
   activeItem: string;
   onItemClick: (id: string) => void;
   isAdmin?: boolean;
+  isTeacher?: boolean;
 }
 
-const DashboardSidebar = ({ activeItem, onItemClick, isAdmin }: DashboardSidebarProps) => {
+const DashboardSidebar = ({ activeItem, onItemClick, isAdmin, isTeacher }: DashboardSidebarProps) => {
+  const sections = isTeacher ? teacherSections : studentSections;
+
   return (
     <aside className="lms-sidebar w-60 min-h-screen overflow-y-auto flex-shrink-0">
       <div className="py-4">
