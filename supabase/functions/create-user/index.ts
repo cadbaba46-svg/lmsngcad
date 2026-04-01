@@ -23,7 +23,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Verify caller is authenticated
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -41,7 +40,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin role using the has_role function
     const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
       _user_id: caller.id,
       _role: "admin",
@@ -54,7 +52,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email, full_name, department, semester, roll_number } = await req.json();
+    const { email, full_name, department, semester, roll_number, father_name, phone, cnic, role } = await req.json();
 
     if (!email || !full_name) {
       return new Response(JSON.stringify({ error: "Email and full name are required" }), {
@@ -80,15 +78,29 @@ Deno.serve(async (req) => {
     }
 
     // Update profile with additional info
-    if (data.user && (department || semester || roll_number)) {
-      await supabaseAdmin
-        .from("profiles")
-        .update({
-          department: department || null,
-          semester: semester || null,
-          roll_number: roll_number || null,
-        })
-        .eq("user_id", data.user.id);
+    if (data.user) {
+      const profileUpdate: Record<string, any> = {};
+      if (department) profileUpdate.department = department;
+      if (semester) profileUpdate.semester = semester;
+      if (roll_number) profileUpdate.roll_number = roll_number;
+      if (father_name) profileUpdate.father_name = father_name;
+      if (phone) profileUpdate.phone = phone;
+      if (cnic) profileUpdate.cnic = cnic;
+
+      if (Object.keys(profileUpdate).length > 0) {
+        await supabaseAdmin
+          .from("profiles")
+          .update(profileUpdate)
+          .eq("user_id", data.user.id);
+      }
+
+      // If role is teacher, update the role
+      if (role === "teacher") {
+        await supabaseAdmin
+          .from("user_roles")
+          .update({ role: "teacher" })
+          .eq("user_id", data.user.id);
+      }
     }
 
     return new Response(
