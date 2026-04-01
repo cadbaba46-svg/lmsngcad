@@ -83,7 +83,7 @@ const AdminPanel = () => {
 
   const fetchTeachers = async () => {
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
-    const teacherIds = (roles || []).filter((r) => r.role === "teacher").map((r) => r.user_id);
+    const teacherIds = (roles || []).filter((r) => (r.role as string) === "teacher").map((r) => r.user_id);
     if (teacherIds.length === 0) { setTeachers([]); return; }
     const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", teacherIds);
     setTeachers(profiles || []);

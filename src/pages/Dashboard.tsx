@@ -41,7 +41,7 @@ const Dashboard = () => {
 
       // Check roles
       supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data }) => {
-        const roles = (data || []).map((r) => r.role);
+        const roles = (data || []).map((r) => r.role as string);
         const admin = roles.includes("admin");
         const teacher = roles.includes("teacher");
         setIsAdmin(admin);
