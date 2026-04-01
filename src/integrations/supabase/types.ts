@@ -133,6 +133,35 @@ export type Database = {
         }
         Relationships: []
       }
+      teacher_assignments: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          teacher_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          teacher_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_assignments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
