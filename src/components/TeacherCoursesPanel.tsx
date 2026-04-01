@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Users, BookOpen } from "lucide-react";
+import { Loader2, BookOpen } from "lucide-react";
 
 const TeacherCoursesPanel = () => {
   const { user } = useAuth();
@@ -12,7 +12,7 @@ const TeacherCoursesPanel = () => {
     if (!user) return;
     const fetch = async () => {
       setLoading(true);
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("teacher_assignments")
         .select("*, courses(*)")
         .eq("teacher_id", user.id);
@@ -33,7 +33,7 @@ const TeacherCoursesPanel = () => {
         <p className="text-muted-foreground">No courses assigned to you yet.</p>
       ) : (
         <div className="grid gap-4">
-          {assignments.map((a) => (
+          {assignments.map((a: any) => (
             <div key={a.id} className="bg-card border border-border rounded-lg p-4">
               <h3 className="font-bold text-foreground">{a.courses?.name}</h3>
               <p className="text-sm text-muted-foreground">{a.courses?.description}</p>

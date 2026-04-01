@@ -12,8 +12,7 @@ const TeacherStudentsPanel = () => {
     if (!user) return;
     const fetch = async () => {
       setLoading(true);
-      // Get courses assigned to this teacher
-      const { data: assignments } = await supabase
+      const { data: assignments } = await (supabase as any)
         .from("teacher_assignments")
         .select("course_id, courses(name)")
         .eq("teacher_id", user.id);
@@ -24,25 +23,36 @@ const TeacherStudentsPanel = () => {
         return;
       }
 
-      const courseIds = assignments.map((a) => a.course_id);
+      const courseIds = assignments.map((a: any) => a.course_id);
 
-      // Get enrollments for those courses
       const { data: enrollments } = await supabase
         .from("enrollments")
-        .select("*, courses(name), profiles!inner(full_name, roll_number, department, semester)")
+        .select("*")
         .in("course_id", courseIds);
 
-      // Map course name from assignments
+      if (!enrollments || enrollments.length === 0) {
+        setStudents([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get profiles for enrolled users
+      const userIds = enrollments.map((e) => e.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, roll_number, department, semester")
+        .in("user_id", userIds);
+
+      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p]));
       const courseMap = Object.fromEntries(assignments.map((a: any) => [a.course_id, a.courses?.name]));
 
       setStudents(
-        (enrollments || []).map((e: any) => ({
+        enrollments.map((e) => ({
           ...e,
-          course_name: courseMap[e.course_id] || e.courses?.name,
-          student_name: e.profiles?.full_name,
-          roll_number: e.profiles?.roll_number,
-          department: e.profiles?.department,
-          semester: e.profiles?.semester,
+          course_name: courseMap[e.course_id],
+          student_name: profileMap[e.user_id]?.full_name,
+          roll_number: profileMap[e.user_id]?.roll_number,
+          department: profileMap[e.user_id]?.department,
         }))
       );
       setLoading(false);
