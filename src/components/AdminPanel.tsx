@@ -73,7 +73,7 @@ const AdminPanel = () => {
 
   const fetchUsers = async () => {
     const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-    setUsers((data || []) as Profile[]);
+    setUsers((data || []) as unknown as Profile[]);
   };
 
   const fetchCourses = async () => {
