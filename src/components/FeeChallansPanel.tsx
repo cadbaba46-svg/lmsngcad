@@ -14,10 +14,10 @@ const FeeChallansPanel = () => {
       setLoading(true);
       const { data } = await supabase
         .from("profiles")
-        .select("cnic")
+        .select("*")
         .eq("user_id", user.id)
         .maybeSingle();
-      if (data?.cnic) setCnic(data.cnic);
+      if ((data as any)?.cnic) setCnic((data as any).cnic);
       setLoading(false);
     };
     fetchCnic();
