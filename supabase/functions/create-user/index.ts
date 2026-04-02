@@ -77,9 +77,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update profile with additional info
+    // Update or create profile with additional info
     if (data.user) {
-      const profileUpdate: Record<string, any> = {};
+      const profileUpdate: Record<string, any> = {
+        full_name: full_name,
+      };
       if (department) profileUpdate.department = department;
       if (semester) profileUpdate.semester = semester;
       if (roll_number) profileUpdate.roll_number = roll_number;
@@ -87,19 +89,41 @@ Deno.serve(async (req) => {
       if (phone) profileUpdate.phone = phone;
       if (cnic) profileUpdate.cnic = cnic;
 
-      if (Object.keys(profileUpdate).length > 0) {
+      // Try update first, if no rows affected, insert
+      const { data: existing } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+
+      if (existing) {
         await supabaseAdmin
           .from("profiles")
           .update(profileUpdate)
           .eq("user_id", data.user.id);
+      } else {
+        await supabaseAdmin
+          .from("profiles")
+          .insert({ ...profileUpdate, user_id: data.user.id });
       }
 
-      // If role is teacher, update the role
-      if (role === "teacher") {
+      // Handle role assignment
+      const targetRole = role === "teacher" ? "teacher" : "user";
+      const { data: existingRole } = await supabaseAdmin
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+
+      if (existingRole) {
         await supabaseAdmin
           .from("user_roles")
-          .update({ role: "teacher" })
+          .update({ role: targetRole })
           .eq("user_id", data.user.id);
+      } else {
+        await supabaseAdmin
+          .from("user_roles")
+          .insert({ user_id: data.user.id, role: targetRole });
       }
     }
 
