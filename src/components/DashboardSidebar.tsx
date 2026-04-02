@@ -18,7 +18,11 @@ const studentSections: SidebarSection[] = [
   },
   {
     title: "Curriculum Design",
-    items: [{ label: "Lab Report Track", id: "lab-report-track" }],
+    items: [
+      { label: "Lab Report Track", id: "lab-report-track" },
+      { label: "Open Ended Lab (OEL)", id: "oel" },
+      { label: "Complex Engineering Problem (CEP)", id: "cep" },
+    ],
   },
   {
     title: "Results",
