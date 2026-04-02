@@ -43,7 +43,7 @@ const StudentProfilePanel = () => {
     { icon: <Phone className="h-4 w-4" />, label: "Phone Number", value: profile.phone },
     { icon: <IdCard className="h-4 w-4" />, label: "CNIC Number", value: profile.cnic },
     { icon: <BookOpen className="h-4 w-4" />, label: "Course Selected", value: enrollment?.courses?.name || "None" },
-    { icon: <IdCard className="h-4 w-4" />, label: "Username (Roll Number)", value: profile.roll_number },
+    { icon: <IdCard className="h-4 w-4" />, label: "Registration Number", value: profile.roll_number },
     { icon: <User className="h-4 w-4" />, label: "Department", value: profile.department },
     { icon: <User className="h-4 w-4" />, label: "Semester", value: profile.semester },
   ];

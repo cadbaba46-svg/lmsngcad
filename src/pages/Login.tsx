@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { RefreshCw, Check } from "lucide-react";
+import { RefreshCw, Check, ShieldCheck } from "lucide-react";
 
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 20) + 1;
@@ -108,10 +108,13 @@ const Login = () => {
     refreshCaptcha();
   };
 
-  const CaptchaBlock = () => (
+  // Inline captcha block to prevent re-mount on each keystroke
+  const captchaBlock = (
     <div className="bg-muted border border-border rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-semibold">Security Check</Label>
+        <Label className="text-sm font-semibold flex items-center gap-1.5">
+          <ShieldCheck className="h-4 w-4 text-primary" /> Verify you&apos;re human
+        </Label>
         <button type="button" onClick={refreshCaptcha} className="text-muted-foreground hover:text-foreground transition-colors">
           <RefreshCw className="h-4 w-4" />
         </button>
@@ -128,11 +131,13 @@ const Login = () => {
         />
         <Button
           type="button"
-          variant={captchaVerified ? "default" : "outline"}
           size="sm"
           onClick={verifyCaptcha}
           disabled={captchaVerified || !captchaInput}
-          className={captchaVerified ? "bg-green-600 hover:bg-green-700 gap-1" : "gap-1"}
+          className={captchaVerified
+            ? "bg-green-600 hover:bg-green-700 gap-1 text-white"
+            : "bg-primary hover:bg-primary/90 gap-1 text-primary-foreground"
+          }
         >
           <Check className="h-4 w-4" />
           {captchaVerified ? "Verified" : "Check"}
@@ -165,7 +170,7 @@ const Login = () => {
                 <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
 
-              <CaptchaBlock />
+              {captchaBlock}
 
               <div className="flex items-center justify-between">
                 <Button type="submit" disabled={loading || !captchaVerified} className={!captchaVerified ? "opacity-50" : ""}>
@@ -200,7 +205,7 @@ const Login = () => {
                 />
               </div>
 
-              <CaptchaBlock />
+              {captchaBlock}
 
               <div className="flex items-center justify-between">
                 <Button type="submit" disabled={loading || !captchaVerified} className={!captchaVerified ? "opacity-50" : ""}>

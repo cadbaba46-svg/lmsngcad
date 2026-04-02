@@ -10,6 +10,9 @@ import AdminPanel from "@/components/AdminPanel";
 import TeacherCoursesPanel from "@/components/TeacherCoursesPanel";
 import TeacherStudentsPanel from "@/components/TeacherStudentsPanel";
 import TeacherAttendancePanel from "@/components/TeacherAttendancePanel";
+import FeeChallansPanel from "@/components/FeeChallansPanel";
+import MiscChallanPanel from "@/components/MiscChallanPanel";
+import DuesSummaryPanel from "@/components/DuesSummaryPanel";
 import ngcadLogo from "@/assets/ngcad-logo.png";
 import { LogOut } from "lucide-react";
 
@@ -39,7 +42,6 @@ const Dashboard = () => {
           if (data?.full_name) setProfileName(data.roll_number || data.full_name);
         });
 
-      // Check roles
       supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data }) => {
         const roles = (data || []).map((r) => r.role as string);
         const admin = roles.includes("admin");
@@ -98,6 +100,12 @@ const Dashboard = () => {
         return <CurrentCoursesPanel />;
       case "student-profile":
         return <StudentProfilePanel />;
+      case "fee-challans":
+        return <FeeChallansPanel />;
+      case "misc-challan":
+        return <MiscChallanPanel />;
+      case "dues-summary":
+        return <DuesSummaryPanel />;
       case "teacher-courses":
         return <TeacherCoursesPanel />;
       case "teacher-students":
