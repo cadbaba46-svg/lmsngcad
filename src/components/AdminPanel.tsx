@@ -136,7 +136,7 @@ const AdminPanel = () => {
         setCreatedEmail(email);
         setCreatedRollNumber(rollNumber);
         toast.success("User created successfully!");
-        setEmail(""); setFullName(""); setFatherName(""); setDepartment(""); setSemester(""); setRollNumber(""); setPhone(""); setCnic(""); setUserRole("user");
+        setEmail(""); setFullName(""); setFatherName(""); setRollNumber(""); setPhone(""); setCnic(""); setUserRole("student");
         fetchUsers();
         fetchTeachers();
       }
