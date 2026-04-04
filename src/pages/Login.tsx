@@ -51,6 +51,7 @@ const Login = () => {
 
     try {
       let email = identifier;
+      // If not an email, look up by registration number (roll_number)
       if (!identifier.includes("@")) {
         const { data, error } = await supabase.functions.invoke("login-by-username", {
           body: { identifier, password },
@@ -64,12 +65,23 @@ const Login = () => {
         email = data.email;
       }
 
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         toast.error(error.message);
         refreshCaptcha();
       } else {
-        navigate("/dashboard");
+        // Check if user must change password
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("must_change_password")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
+
+        if (profile?.must_change_password) {
+          navigate("/reset-password?force=true");
+        } else {
+          navigate("/dashboard");
+        }
       }
     } catch {
       toast.error("Login failed. Please try again.");
@@ -155,11 +167,11 @@ const Login = () => {
             <form onSubmit={handleLogin} className="space-y-4">
               <h2 className="text-2xl font-bold text-foreground text-center mb-4">Log in</h2>
               <div className="space-y-2">
-                <Label htmlFor="login-identifier">Email or Roll Number</Label>
+                <Label htmlFor="login-identifier">Email or Registration Number</Label>
                 <Input
                   id="login-identifier"
                   type="text"
-                  placeholder="Enter email or roll number"
+                  placeholder="Enter email or registration number"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   required
@@ -191,14 +203,14 @@ const Login = () => {
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <h2 className="text-2xl font-bold text-foreground text-center mb-4">Reset Password</h2>
               <p className="text-sm text-muted-foreground text-center">
-                Enter your email address or roll number and we'll send a reset link to the registered email.
+                Enter your email address or registration number and we'll send a reset link to the registered email.
               </p>
               <div className="space-y-2">
-                <Label htmlFor="reset-identifier">Email or Roll Number</Label>
+                <Label htmlFor="reset-identifier">Email or Registration Number</Label>
                 <Input
                   id="reset-identifier"
                   type="text"
-                  placeholder="Enter email or roll number"
+                  placeholder="Enter email or registration number"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   required
