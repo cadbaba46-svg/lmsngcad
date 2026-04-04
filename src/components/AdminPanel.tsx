@@ -52,12 +52,10 @@ const AdminPanel = () => {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [fatherName, setFatherName] = useState("");
-  const [department, setDepartment] = useState("");
-  const [semester, setSemester] = useState("");
   const [rollNumber, setRollNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [cnic, setCnic] = useState("");
-  const [userRole, setUserRole] = useState<"user" | "teacher">("user");
+  const [userRole, setUserRole] = useState<"user" | "student" | "teacher">("student");
 
   // Course edit
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
