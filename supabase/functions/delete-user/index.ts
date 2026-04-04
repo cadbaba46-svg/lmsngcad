@@ -5,6 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const PROTECTED_EMAIL = "nextgencadacademy@gmail.com";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -54,7 +56,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Prevent admin from deleting themselves
+    // Prevent deleting yourself
     if (user_id === caller.id) {
       return new Response(JSON.stringify({ error: "Cannot delete your own account" }), {
         status: 400,
@@ -62,13 +64,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Delete from profiles, enrollments, user_roles (cascade should handle most)
+    // Prevent deleting the primary admin
+    const { data: { user: targetUser } } = await supabaseAdmin.auth.admin.getUserById(user_id);
+    if (targetUser?.email === PROTECTED_EMAIL) {
+      return new Response(JSON.stringify({ error: "Cannot delete the primary administrator account" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Delete related data
     await supabaseAdmin.from("enrollments").delete().eq("user_id", user_id);
     await supabaseAdmin.from("teacher_assignments").delete().eq("teacher_id", user_id);
     await supabaseAdmin.from("profiles").delete().eq("user_id", user_id);
     await supabaseAdmin.from("user_roles").delete().eq("user_id", user_id);
 
-    // Delete the auth user
     const { error } = await supabaseAdmin.auth.admin.deleteUser(user_id);
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), {

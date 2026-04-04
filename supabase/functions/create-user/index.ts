@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email, full_name, department, semester, roll_number, father_name, phone, cnic, role } = await req.json();
+    const { email, full_name, roll_number, father_name, phone, cnic, role } = await req.json();
 
     if (!email || !full_name) {
       return new Response(JSON.stringify({ error: "Email and full name are required" }), {
@@ -77,54 +77,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update or create profile with additional info
     if (data.user) {
       const profileUpdate: Record<string, any> = {
-        full_name: full_name,
+        full_name,
+        must_change_password: true,
       };
-      if (department) profileUpdate.department = department;
-      if (semester) profileUpdate.semester = semester;
       if (roll_number) profileUpdate.roll_number = roll_number;
       if (father_name) profileUpdate.father_name = father_name;
       if (phone) profileUpdate.phone = phone;
       if (cnic) profileUpdate.cnic = cnic;
 
-      // Try update first, if no rows affected, insert
-      const { data: existing } = await supabaseAdmin
+      // Update profile (trigger already created it)
+      await supabaseAdmin
         .from("profiles")
-        .select("id")
-        .eq("user_id", data.user.id)
-        .maybeSingle();
+        .update(profileUpdate)
+        .eq("user_id", data.user.id);
 
-      if (existing) {
-        await supabaseAdmin
-          .from("profiles")
-          .update(profileUpdate)
-          .eq("user_id", data.user.id);
-      } else {
-        await supabaseAdmin
-          .from("profiles")
-          .insert({ ...profileUpdate, user_id: data.user.id });
-      }
-
-      // Handle role assignment
-      const targetRole = role === "teacher" ? "teacher" : "user";
-      const { data: existingRole } = await supabaseAdmin
+      // Set the correct role: user, student, or teacher
+      const targetRole = role === "teacher" ? "teacher" : role === "student" ? "student" : "user";
+      await supabaseAdmin
         .from("user_roles")
-        .select("id")
-        .eq("user_id", data.user.id)
-        .maybeSingle();
-
-      if (existingRole) {
-        await supabaseAdmin
-          .from("user_roles")
-          .update({ role: targetRole })
-          .eq("user_id", data.user.id);
-      } else {
-        await supabaseAdmin
-          .from("user_roles")
-          .insert({ user_id: data.user.id, role: targetRole });
-      }
+        .update({ role: targetRole })
+        .eq("user_id", data.user.id);
     }
 
     return new Response(
