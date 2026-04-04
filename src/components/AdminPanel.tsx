@@ -125,7 +125,7 @@ const AdminPanel = () => {
     setCreating(true);
     try {
       const res = await supabase.functions.invoke("create-user", {
-        body: { email, full_name: fullName, department, semester, roll_number: rollNumber, father_name: fatherName, phone, cnic, role: userRole },
+        body: { email, full_name: fullName, roll_number: rollNumber, father_name: fatherName, phone, cnic, role: userRole },
       });
 
       if (res.error) {
