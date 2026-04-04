@@ -294,23 +294,16 @@ const AdminPanel = () => {
                   <Input value={cnic} onChange={(e) => setCnic(e.target.value)} placeholder="e.g. 35201-1234567-1" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Department</Label>
-                  <Input value={department} onChange={(e) => setDepartment(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Semester</Label>
-                  <Input value={semester} onChange={(e) => setSemester(e.target.value)} />
-                </div>
-                <div className="space-y-2">
                   <Label>Registration Number</Label>
                   <Input value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} placeholder="e.g. NGCAD-2025-001" />
                 </div>
                 <div className="space-y-2">
                   <Label>Role</Label>
-                  <Select value={userRole} onValueChange={(v) => setUserRole(v as "user" | "teacher")}>
+                  <Select value={userRole} onValueChange={(v) => setUserRole(v as "user" | "student" | "teacher")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user">Student</SelectItem>
+                      <SelectItem value="user">User (Staff)</SelectItem>
+                      <SelectItem value="student">Student</SelectItem>
                       <SelectItem value="teacher">Teacher</SelectItem>
                     </SelectContent>
                   </Select>
