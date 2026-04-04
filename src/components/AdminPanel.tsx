@@ -52,12 +52,10 @@ const AdminPanel = () => {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [fatherName, setFatherName] = useState("");
-  const [department, setDepartment] = useState("");
-  const [semester, setSemester] = useState("");
   const [rollNumber, setRollNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [cnic, setCnic] = useState("");
-  const [userRole, setUserRole] = useState<"user" | "teacher">("user");
+  const [userRole, setUserRole] = useState<"user" | "student" | "teacher">("student");
 
   // Course edit
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -127,7 +125,7 @@ const AdminPanel = () => {
     setCreating(true);
     try {
       const res = await supabase.functions.invoke("create-user", {
-        body: { email, full_name: fullName, department, semester, roll_number: rollNumber, father_name: fatherName, phone, cnic, role: userRole },
+        body: { email, full_name: fullName, roll_number: rollNumber, father_name: fatherName, phone, cnic, role: userRole },
       });
 
       if (res.error) {
@@ -138,7 +136,7 @@ const AdminPanel = () => {
         setCreatedEmail(email);
         setCreatedRollNumber(rollNumber);
         toast.success("User created successfully!");
-        setEmail(""); setFullName(""); setFatherName(""); setDepartment(""); setSemester(""); setRollNumber(""); setPhone(""); setCnic(""); setUserRole("user");
+        setEmail(""); setFullName(""); setFatherName(""); setRollNumber(""); setPhone(""); setCnic(""); setUserRole("student");
         fetchUsers();
         fetchTeachers();
       }
@@ -296,23 +294,16 @@ const AdminPanel = () => {
                   <Input value={cnic} onChange={(e) => setCnic(e.target.value)} placeholder="e.g. 35201-1234567-1" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Department</Label>
-                  <Input value={department} onChange={(e) => setDepartment(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Semester</Label>
-                  <Input value={semester} onChange={(e) => setSemester(e.target.value)} />
-                </div>
-                <div className="space-y-2">
                   <Label>Registration Number</Label>
                   <Input value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} placeholder="e.g. NGCAD-2025-001" />
                 </div>
                 <div className="space-y-2">
                   <Label>Role</Label>
-                  <Select value={userRole} onValueChange={(v) => setUserRole(v as "user" | "teacher")}>
+                  <Select value={userRole} onValueChange={(v) => setUserRole(v as "user" | "student" | "teacher")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user">Student</SelectItem>
+                      <SelectItem value="user">User (Staff)</SelectItem>
+                      <SelectItem value="student">Student</SelectItem>
                       <SelectItem value="teacher">Teacher</SelectItem>
                     </SelectContent>
                   </Select>

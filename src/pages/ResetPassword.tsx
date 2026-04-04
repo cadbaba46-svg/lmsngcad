@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,24 +10,29 @@ import Footer from "@/components/Footer";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isForced = searchParams.get("force") === "true";
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Listen for the PASSWORD_RECOVERY event
+    if (isForced) {
+      // Force password change — user is already logged in
+      setReady(true);
+      return;
+    }
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setReady(true);
       }
     });
-    // Also check if we already have a session from the recovery link
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setReady(true);
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isForced]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,13 +46,24 @@ const ResetPassword = () => {
     }
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setLoading(false);
     if (error) {
       toast.error(error.message);
-    } else {
-      toast.success("Password updated successfully!");
-      navigate("/login");
+      setLoading(false);
+      return;
     }
+
+    // Clear the must_change_password flag
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ must_change_password: false })
+        .eq("user_id", user.id);
+    }
+
+    setLoading(false);
+    toast.success("Password updated successfully!");
+    navigate("/dashboard");
   };
 
   return (
@@ -63,7 +79,14 @@ const ResetPassword = () => {
             </div>
           ) : (
             <form onSubmit={handleReset} className="space-y-4">
-              <h2 className="text-2xl font-bold text-foreground text-center mb-4">Set New Password</h2>
+              <h2 className="text-2xl font-bold text-foreground text-center mb-4">
+                {isForced ? "Change Your Password" : "Set New Password"}
+              </h2>
+              {isForced && (
+                <p className="text-sm text-muted-foreground text-center">
+                  You must set a new password before accessing your account.
+                </p>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="new-password">New Password</Label>
                 <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />

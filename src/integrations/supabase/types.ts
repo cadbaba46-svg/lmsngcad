@@ -104,6 +104,7 @@ export type Database = {
           department: string | null
           full_name: string | null
           id: string
+          must_change_password: boolean
           roll_number: string | null
           semester: string | null
           updated_at: string
@@ -115,6 +116,7 @@ export type Database = {
           department?: string | null
           full_name?: string | null
           id?: string
+          must_change_password?: boolean
           roll_number?: string | null
           semester?: string | null
           updated_at?: string
@@ -126,6 +128,7 @@ export type Database = {
           department?: string | null
           full_name?: string | null
           id?: string
+          must_change_password?: boolean
           roll_number?: string | null
           semester?: string | null
           updated_at?: string
@@ -194,7 +197,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "student" | "teacher"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -322,7 +325,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "student", "teacher"],
     },
   },
 } as const
