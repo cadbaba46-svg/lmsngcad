@@ -13,6 +13,7 @@ import TeacherAttendancePanel from "@/components/TeacherAttendancePanel";
 import FeeChallansPanel from "@/components/FeeChallansPanel";
 import MiscChallanPanel from "@/components/MiscChallanPanel";
 import DuesSummaryPanel from "@/components/DuesSummaryPanel";
+import CourseFreezePanel from "@/components/CourseFreezePanel";
 import ngcadLogo from "@/assets/ngcad-logo.png";
 import { LogOut } from "lucide-react";
 
@@ -106,6 +107,8 @@ const Dashboard = () => {
         return <MiscChallanPanel />;
       case "dues-summary":
         return <DuesSummaryPanel />;
+      case "course-freeze":
+        return <CourseFreezePanel />;
       case "teacher-courses":
         return <TeacherCoursesPanel />;
       case "teacher-students":

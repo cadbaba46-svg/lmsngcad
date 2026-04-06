@@ -32,7 +32,6 @@ const studentSections: SidebarSection[] = [
     title: "Admissions",
     items: [
       { label: "Student Clearance", id: "student-clearance" },
-      { label: "Student Information", id: "student-info" },
       { label: "Re-Admission Request", id: "re-admission" },
     ],
   },
@@ -45,6 +44,7 @@ const studentSections: SidebarSection[] = [
     items: [
       { label: "Student Services", id: "student-services" },
       { label: "Student Request", id: "student-request" },
+      { label: "Course Freeze", id: "course-freeze" },
     ],
   },
   {

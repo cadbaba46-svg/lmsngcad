@@ -103,6 +103,7 @@ export type Database = {
           created_at: string
           department: string | null
           full_name: string | null
+          generated_password: string | null
           id: string
           must_change_password: boolean
           roll_number: string | null
@@ -115,6 +116,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           full_name?: string | null
+          generated_password?: string | null
           id?: string
           must_change_password?: boolean
           roll_number?: string | null
@@ -127,6 +129,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           full_name?: string | null
+          generated_password?: string | null
           id?: string
           must_change_password?: boolean
           roll_number?: string | null

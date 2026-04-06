@@ -181,6 +181,8 @@ const AdminPanel = () => {
     // Fetch role
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.user_id);
     setSelectedUserRole((roles || []).map((r) => r.role as string).join(", ") || "user");
+    // Fetch email from auth via edge function is not possible, use user metadata
+    // We'll show email from the users list if available
   };
 
   const copyCredentials = () => {
@@ -342,12 +344,12 @@ const AdminPanel = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
                 <div><span className="text-muted-foreground">Full Name:</span> <span className="font-medium text-foreground">{selectedUser.full_name || "—"}</span></div>
                 <div><span className="text-muted-foreground">Father Name:</span> <span className="font-medium text-foreground">{(selectedUser as any).father_name || "—"}</span></div>
+                <div><span className="text-muted-foreground">Email:</span> <span className="font-medium text-foreground font-mono">{(selectedUser as any).email || "—"}</span></div>
                 <div><span className="text-muted-foreground">Registration No:</span> <span className="font-medium text-foreground">{selectedUser.roll_number || "—"}</span></div>
-                <div><span className="text-muted-foreground">Department:</span> <span className="font-medium text-foreground">{selectedUser.department || "—"}</span></div>
-                <div><span className="text-muted-foreground">Semester:</span> <span className="font-medium text-foreground">{selectedUser.semester || "—"}</span></div>
                 <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium text-foreground">{selectedUser.phone || "—"}</span></div>
                 <div><span className="text-muted-foreground">CNIC:</span> <span className="font-medium text-foreground">{selectedUser.cnic || "—"}</span></div>
                 <div><span className="text-muted-foreground">Role:</span> <span className="font-medium text-foreground capitalize">{selectedUserRole}</span></div>
+                <div><span className="text-muted-foreground">Password:</span> <span className="font-medium text-foreground font-mono">{(selectedUser as any).generated_password || "—"}</span></div>
                 <div><span className="text-muted-foreground">Enrolled Course:</span> <span className="font-medium text-foreground">{selectedUserEnrollment?.courses?.name || "None"}</span></div>
                 <div><span className="text-muted-foreground">Payment:</span> <span className={`font-medium ${selectedUserEnrollment?.challan_paid ? "text-green-600" : "text-destructive"}`}>{selectedUserEnrollment ? (selectedUserEnrollment.challan_paid ? "Paid" : "Unpaid") : "N/A"}</span></div>
                 <div><span className="text-muted-foreground">Created:</span> <span className="font-medium text-foreground">{new Date(selectedUser.created_at).toLocaleDateString()}</span></div>

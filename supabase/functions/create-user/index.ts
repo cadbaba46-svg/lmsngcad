@@ -81,19 +81,18 @@ Deno.serve(async (req) => {
       const profileUpdate: Record<string, any> = {
         full_name,
         must_change_password: true,
+        generated_password: password,
       };
       if (roll_number) profileUpdate.roll_number = roll_number;
       if (father_name) profileUpdate.father_name = father_name;
       if (phone) profileUpdate.phone = phone;
       if (cnic) profileUpdate.cnic = cnic;
 
-      // Update profile (trigger already created it)
       await supabaseAdmin
         .from("profiles")
         .update(profileUpdate)
         .eq("user_id", data.user.id);
 
-      // Set the correct role: user, student, or teacher
       const targetRole = role === "teacher" ? "teacher" : role === "student" ? "student" : "user";
       await supabaseAdmin
         .from("user_roles")
