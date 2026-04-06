@@ -181,6 +181,8 @@ const AdminPanel = () => {
     // Fetch role
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.user_id);
     setSelectedUserRole((roles || []).map((r) => r.role as string).join(", ") || "user");
+    // Fetch email from auth via edge function is not possible, use user metadata
+    // We'll show email from the users list if available
   };
 
   const copyCredentials = () => {
