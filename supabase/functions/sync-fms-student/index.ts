@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     }
 
     if (data.user) {
-      // Update profile with FMS registration data
+      // Update profile with FMS registration data + store generated password
       await supabaseAdmin
         .from("profiles")
         .update({
@@ -78,6 +78,7 @@ Deno.serve(async (req) => {
           cnic,
           roll_number: regNumber,
           must_change_password: true,
+          generated_password: password,
         })
         .eq("user_id", data.user.id);
 

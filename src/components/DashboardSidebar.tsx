@@ -44,6 +44,7 @@ const studentSections: SidebarSection[] = [
     items: [
       { label: "Student Services", id: "student-services" },
       { label: "Student Request", id: "student-request" },
+      { label: "Course Freeze", id: "course-freeze" },
     ],
   },
   {
