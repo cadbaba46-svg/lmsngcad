@@ -107,6 +107,8 @@ const Dashboard = () => {
         return <MiscChallanPanel />;
       case "dues-summary":
         return <DuesSummaryPanel />;
+      case "course-freeze":
+        return <CourseFreezePanel />;
       case "teacher-courses":
         return <TeacherCoursesPanel />;
       case "teacher-students":
