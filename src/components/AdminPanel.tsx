@@ -12,12 +12,14 @@ interface Profile {
   id: string;
   user_id: string;
   full_name: string | null;
+  email: string | null;
   department: string | null;
   semester: string | null;
   roll_number: string | null;
   father_name: string | null;
   phone: string | null;
   cnic: string | null;
+  generated_password: string | null;
   created_at: string;
 }
 
