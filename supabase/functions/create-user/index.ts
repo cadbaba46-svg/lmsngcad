@@ -80,6 +80,7 @@ Deno.serve(async (req) => {
     if (data.user) {
       const profileUpdate: Record<string, any> = {
         full_name,
+        email,
         must_change_password: true,
         generated_password: password,
       };

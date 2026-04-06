@@ -12,12 +12,14 @@ interface Profile {
   id: string;
   user_id: string;
   full_name: string | null;
+  email: string | null;
   department: string | null;
   semester: string | null;
   roll_number: string | null;
   father_name: string | null;
   phone: string | null;
   cnic: string | null;
+  generated_password: string | null;
   created_at: string;
 }
 
@@ -33,6 +35,7 @@ interface Course {
 
 const AdminPanel = () => {
   const [users, setUsers] = useState<Profile[]>([]);
+  const [students, setStudents] = useState<Profile[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [enrollments, setEnrollments] = useState<any[]>([]);
@@ -91,6 +94,14 @@ const AdminPanel = () => {
     setTeachers(profiles || []);
   };
 
+  const fetchStudents = async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id, role");
+    const studentIds = (roles || []).filter((r) => (r.role as string) === "student").map((r) => r.user_id);
+    if (studentIds.length === 0) { setStudents([]); return; }
+    const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", studentIds);
+    setStudents((profiles || []) as unknown as Profile[]);
+  };
+
   const fetchEnrollments = async () => {
     const { data } = await supabase.from("enrollments").select("*, courses(name)");
     if (!data) { setEnrollments([]); return; }
@@ -113,7 +124,7 @@ const AdminPanel = () => {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchUsers(), fetchCourses(), fetchTeachers(), fetchEnrollments(), fetchAssignments()]).then(() => setLoading(false));
+    Promise.all([fetchUsers(), fetchCourses(), fetchTeachers(), fetchStudents(), fetchEnrollments(), fetchAssignments()]).then(() => setLoading(false));
   }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -138,6 +149,7 @@ const AdminPanel = () => {
         toast.success("User created successfully!");
         setEmail(""); setFullName(""); setFatherName(""); setRollNumber(""); setPhone(""); setCnic(""); setUserRole("student");
         fetchUsers();
+        fetchStudents();
         fetchTeachers();
       }
     } catch (err: any) {
@@ -159,6 +171,7 @@ const AdminPanel = () => {
         toast.success("User deleted successfully");
         if (selectedUser?.user_id === userId) setSelectedUser(null);
         fetchUsers();
+        fetchStudents();
         fetchTeachers();
         fetchEnrollments();
         fetchAssignments();
@@ -411,38 +424,50 @@ const AdminPanel = () => {
 
         {/* Students Tab */}
         <TabsContent value="students" className="space-y-4 mt-4">
-          <h3 className="text-lg font-semibold text-foreground">Student Enrollments & Records</h3>
+          <h3 className="text-lg font-semibold text-foreground">All Students</h3>
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted">
-                    <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Reg. Number</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Course</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Payment</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Attendance</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Name</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Email</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Reg. No</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Father Name</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Phone</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">CNIC</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Password</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Created</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {enrollments.length === 0 ? (
-                    <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No enrollments.</td></tr>
+                  {students.length === 0 ? (
+                    <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No students found.</td></tr>
                   ) : (
-                    enrollments.map((e: any) => {
-                      const att = Array.isArray(e.attendance) ? e.attendance : [];
-                      const present = att.filter((a: any) => a.status === "present").length;
-                      return (
-                        <tr key={e.id} className="border-t border-border hover:bg-muted/50">
-                          <td className="p-3 text-foreground">{e.profile?.full_name || "—"}</td>
-                          <td className="p-3 text-muted-foreground">{e.profile?.roll_number || "—"}</td>
-                          <td className="p-3 text-muted-foreground">{e.courses?.name || "—"}</td>
-                          <td className="p-3">{e.challan_paid ? <span className="text-green-600 font-medium">Paid</span> : <span className="text-destructive font-medium">Unpaid</span>}</td>
-                          <td className="p-3 text-muted-foreground capitalize">{e.status}</td>
-                          <td className="p-3 text-muted-foreground">{present}/{att.length} present</td>
-                        </tr>
-                      );
-                    })
+                    students.map((s) => (
+                      <tr key={s.id} className="border-t border-border hover:bg-muted/50">
+                        <td className="p-3 text-foreground font-medium">{s.full_name || "—"}</td>
+                        <td className="p-3 text-muted-foreground font-mono text-xs">{s.email || "—"}</td>
+                        <td className="p-3 text-muted-foreground">{s.roll_number || "—"}</td>
+                        <td className="p-3 text-muted-foreground">{s.father_name || "—"}</td>
+                        <td className="p-3 text-muted-foreground">{s.phone || "—"}</td>
+                        <td className="p-3 text-muted-foreground">{s.cnic || "—"}</td>
+                        <td className="p-3 text-muted-foreground font-mono text-xs">{s.generated_password || "—"}</td>
+                        <td className="p-3 text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</td>
+                        <td className="p-3">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="gap-1 h-7 text-xs"
+                            disabled={deletingUserId === s.user_id}
+                            onClick={() => handleDeleteUser(s.user_id)}
+                          >
+                            <Trash2 className="h-3 w-3" /> Delete
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>

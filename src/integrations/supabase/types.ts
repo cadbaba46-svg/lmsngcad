@@ -100,12 +100,16 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          cnic: string | null
           created_at: string
           department: string | null
+          email: string | null
+          father_name: string | null
           full_name: string | null
           generated_password: string | null
           id: string
           must_change_password: boolean
+          phone: string | null
           roll_number: string | null
           semester: string | null
           updated_at: string
@@ -113,12 +117,16 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          cnic?: string | null
           created_at?: string
           department?: string | null
+          email?: string | null
+          father_name?: string | null
           full_name?: string | null
           generated_password?: string | null
           id?: string
           must_change_password?: boolean
+          phone?: string | null
           roll_number?: string | null
           semester?: string | null
           updated_at?: string
@@ -126,12 +134,16 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          cnic?: string | null
           created_at?: string
           department?: string | null
+          email?: string | null
+          father_name?: string | null
           full_name?: string | null
           generated_password?: string | null
           id?: string
           must_change_password?: boolean
+          phone?: string | null
           roll_number?: string | null
           semester?: string | null
           updated_at?: string
