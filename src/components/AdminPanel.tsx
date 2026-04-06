@@ -40,7 +40,6 @@ const AdminPanel = () => {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
