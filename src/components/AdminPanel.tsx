@@ -149,6 +149,7 @@ const AdminPanel = () => {
         toast.success("User created successfully!");
         setEmail(""); setFullName(""); setFatherName(""); setRollNumber(""); setPhone(""); setCnic(""); setUserRole("student");
         fetchUsers();
+        fetchStudents();
         fetchTeachers();
       }
     } catch (err: any) {
