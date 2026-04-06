@@ -171,6 +171,7 @@ const AdminPanel = () => {
         toast.success("User deleted successfully");
         if (selectedUser?.user_id === userId) setSelectedUser(null);
         fetchUsers();
+        fetchStudents();
         fetchTeachers();
         fetchEnrollments();
         fetchAssignments();
