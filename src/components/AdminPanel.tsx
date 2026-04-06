@@ -94,6 +94,14 @@ const AdminPanel = () => {
     setTeachers(profiles || []);
   };
 
+  const fetchStudents = async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id, role");
+    const studentIds = (roles || []).filter((r) => (r.role as string) === "student").map((r) => r.user_id);
+    if (studentIds.length === 0) { setStudents([]); return; }
+    const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", studentIds);
+    setStudents((profiles || []) as unknown as Profile[]);
+  };
+
   const fetchEnrollments = async () => {
     const { data } = await supabase.from("enrollments").select("*, courses(name)");
     if (!data) { setEnrollments([]); return; }
@@ -116,7 +124,7 @@ const AdminPanel = () => {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchUsers(), fetchCourses(), fetchTeachers(), fetchEnrollments(), fetchAssignments()]).then(() => setLoading(false));
+    Promise.all([fetchUsers(), fetchCourses(), fetchTeachers(), fetchStudents(), fetchEnrollments(), fetchAssignments()]).then(() => setLoading(false));
   }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {
