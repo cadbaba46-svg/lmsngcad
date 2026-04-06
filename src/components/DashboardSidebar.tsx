@@ -32,7 +32,6 @@ const studentSections: SidebarSection[] = [
     title: "Admissions",
     items: [
       { label: "Student Clearance", id: "student-clearance" },
-      { label: "Student Information", id: "student-info" },
       { label: "Re-Admission Request", id: "re-admission" },
     ],
   },
