@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      challans: {
+        Row: {
+          amount: number
+          challan_number: string
+          created_at: string
+          currency: string
+          customer_cnic: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          issue_date: string
+          paid_at: string | null
+          payment_method: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          challan_number: string
+          created_at?: string
+          currency?: string
+          customer_cnic: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          issue_date?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          challan_number?: string
+          created_at?: string
+          currency?: string
+          customer_cnic?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          issue_date?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       courses: {
         Row: {
           course_content: Json | null
