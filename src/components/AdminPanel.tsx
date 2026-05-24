@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Copy, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye } from "lucide-react";
+import { UserPlus, Copy, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AdminSurveysPanel from "@/components/AdminSurveysPanel";
 
 interface Profile {
   id: string;
@@ -274,6 +275,7 @@ const AdminPanel = () => {
           <TabsTrigger value="students" className="gap-2"><GraduationCap className="h-4 w-4" /> Students</TabsTrigger>
           <TabsTrigger value="teachers" className="gap-2"><Users className="h-4 w-4" /> Teachers</TabsTrigger>
           <TabsTrigger value="courses" className="gap-2"><BookOpen className="h-4 w-4" /> Courses</TabsTrigger>
+          <TabsTrigger value="surveys" className="gap-2"><ClipboardList className="h-4 w-4" /> Surveys</TabsTrigger>
         </TabsList>
 
         {/* Users Tab */}
