@@ -648,6 +648,9 @@ const AdminPanel = () => {
             ))}
           </div>
         </TabsContent>
+        <TabsContent value="surveys" className="space-y-4 mt-4">
+          <AdminSurveysPanel />
+        </TabsContent>
       </Tabs>
     </div>
   );
