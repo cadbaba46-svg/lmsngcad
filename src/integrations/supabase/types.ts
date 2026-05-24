@@ -208,6 +208,109 @@ export type Database = {
         }
         Relationships: []
       }
+      survey_responses: {
+        Row: {
+          id: string
+          question_key: string
+          rating: number
+          submission_id: string
+        }
+        Insert: {
+          id?: string
+          question_key: string
+          rating: number
+          submission_id: string
+        }
+        Update: {
+          id?: string
+          question_key?: string
+          rating?: number
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_responses_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "survey_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_submissions: {
+        Row: {
+          course_id: string
+          id: string
+          student_id: string
+          submitted_at: string
+          survey_id: string
+        }
+        Insert: {
+          course_id: string
+          id?: string
+          student_id: string
+          submitted_at?: string
+          survey_id: string
+        }
+        Update: {
+          course_id?: string
+          id?: string
+          student_id?: string
+          submitted_at?: string
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_submissions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_submissions_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      surveys: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surveys_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: true
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_assignments: {
         Row: {
           course_id: string
