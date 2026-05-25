@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           amount: number
           challan_number: string
+          course_id: string | null
           created_at: string
           currency: string
           customer_cnic: string
@@ -26,6 +27,7 @@ export type Database = {
           customer_phone: string | null
           description: string | null
           due_date: string | null
+          enrollment_id: string | null
           id: string
           issue_date: string
           paid_at: string | null
@@ -36,6 +38,7 @@ export type Database = {
         Insert: {
           amount: number
           challan_number: string
+          course_id?: string | null
           created_at?: string
           currency?: string
           customer_cnic: string
@@ -44,6 +47,7 @@ export type Database = {
           customer_phone?: string | null
           description?: string | null
           due_date?: string | null
+          enrollment_id?: string | null
           id?: string
           issue_date?: string
           paid_at?: string | null
@@ -54,6 +58,7 @@ export type Database = {
         Update: {
           amount?: number
           challan_number?: string
+          course_id?: string | null
           created_at?: string
           currency?: string
           customer_cnic?: string
@@ -62,6 +67,7 @@ export type Database = {
           customer_phone?: string | null
           description?: string | null
           due_date?: string | null
+          enrollment_id?: string | null
           id?: string
           issue_date?: string
           paid_at?: string | null
