@@ -277,6 +277,7 @@ const AdminPanel = () => {
           <TabsTrigger value="teachers" className="gap-2"><Users className="h-4 w-4" /> Teachers</TabsTrigger>
           <TabsTrigger value="courses" className="gap-2"><BookOpen className="h-4 w-4" /> Courses</TabsTrigger>
           <TabsTrigger value="surveys" className="gap-2"><ClipboardList className="h-4 w-4" /> Surveys</TabsTrigger>
+          <TabsTrigger value="vault" className="gap-2"><KeyRound className="h-4 w-4" /> Vault</TabsTrigger>
         </TabsList>
 
         {/* Users Tab */}
@@ -651,6 +652,9 @@ const AdminPanel = () => {
         </TabsContent>
         <TabsContent value="surveys" className="space-y-4 mt-4">
           <AdminSurveysPanel />
+        </TabsContent>
+        <TabsContent value="vault" className="mt-4">
+          <CredentialVaultPanel />
         </TabsContent>
       </Tabs>
     </div>
