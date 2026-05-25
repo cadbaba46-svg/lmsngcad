@@ -87,6 +87,20 @@ Deno.serve(async (req) => {
         .from("user_roles")
         .update({ role: "student" })
         .eq("user_id", data.user.id);
+
+      // Send welcome email with credentials
+      try {
+        await supabaseAdmin.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "welcome-credentials",
+            recipientEmail: email,
+            idempotencyKey: `welcome-${data.user.id}`,
+            templateData: { name, email, password, rollNumber: regNumber },
+          },
+        });
+      } catch (e) {
+        console.error("Failed to send welcome email", e);
+      }
     }
 
     return new Response(
