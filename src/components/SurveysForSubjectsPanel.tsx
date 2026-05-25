@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ClipboardList, CheckCircle2 } from "lucide-react";
+import { ClipboardList, CheckCircle2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { SURVEY_QUESTIONS, RATING_LEGEND } from "@/lib/surveyQuestions";
 
@@ -24,6 +24,7 @@ interface Row {
   status: string;
   survey_id: string | null;
   submitted: boolean;
+  progress: number;
 }
 
 const SurveysForSubjectsPanel = () => {
@@ -38,7 +39,7 @@ const SurveysForSubjectsPanel = () => {
     setLoading(true);
     const { data: enrolls } = await supabase
       .from("enrollments")
-      .select("id, course_id, status, courses(name)")
+      .select("id, course_id, status, attendance, courses(name, total_weeks, course_content)")
       .eq("user_id", user.id);
 
     const courseIds = (enrolls || []).map((e: any) => e.course_id);
@@ -64,6 +65,12 @@ const SurveysForSubjectsPanel = () => {
 
     const mapped: Row[] = (enrolls || []).map((e: any) => {
       const survey = surveys.find((s) => s.course_id === e.course_id);
+      const totalWeeks = e.courses?.total_weeks || 0;
+      const attendanceCount = Array.isArray(e.attendance) ? e.attendance.length : 0;
+      const attPct = totalWeeks > 0 ? (attendanceCount / totalWeeks) * 100 : 0;
+      const contentItems = Array.isArray(e.courses?.course_content) ? e.courses.course_content.length : 0;
+      // Content completion tracking not yet implemented per-student; fall back to attendance only.
+      const progress = contentItems > 0 ? Math.round((attPct + attPct) / 2) : Math.round(attPct);
       return {
         enrollment_id: e.id,
         course_id: e.course_id,
@@ -71,6 +78,7 @@ const SurveysForSubjectsPanel = () => {
         status: e.status,
         survey_id: survey?.id ?? null,
         submitted: !!(survey && submitted.find((sub) => sub.survey_id === survey.id)),
+        progress,
       };
     });
     setRows(mapped);
@@ -105,6 +113,7 @@ const SurveysForSubjectsPanel = () => {
               <TableRow>
                 <TableHead>Course Name</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Progress</TableHead>
                 <TableHead className="text-right">Survey Submission Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -113,12 +122,17 @@ const SurveysForSubjectsPanel = () => {
                 <TableRow key={r.enrollment_id}>
                   <TableCell className="font-medium">{r.course_name}</TableCell>
                   <TableCell className="capitalize text-muted-foreground">{r.status}</TableCell>
+                  <TableCell className="text-muted-foreground">{r.progress}%</TableCell>
                   <TableCell className="text-right">
                     {!r.survey_id ? (
                       <Badge variant="outline">No active survey</Badge>
                     ) : r.submitted ? (
                       <Badge className="bg-primary hover:bg-primary text-primary-foreground">
                         Survey Filled
+                      </Badge>
+                    ) : r.progress < 75 ? (
+                      <Badge variant="outline" className="gap-1">
+                        <Lock className="h-3 w-3" /> Unlocks at 75% ({r.progress}%)
                       </Badge>
                     ) : (
                       <Button size="sm" variant="secondary" onClick={() => setOpen(r)}>
