@@ -20,7 +20,12 @@ const Login = () => {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"login" | "forgot">("login");
+  const [mode, setMode] = useState<"login" | "forgot" | "reset">("login");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotCnic, setForgotCnic] = useState("");
+  const [otp, setOtp] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
   const [captcha, setCaptcha] = useState(generateCaptcha);
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaVerified, setCaptchaVerified] = useState(false);
@@ -99,25 +104,54 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.functions.invoke("reset-by-username", {
-        body: {
-          identifier,
-          redirect_to: `${window.location.origin}/reset-password`,
-        },
+      const { error } = await supabase.functions.invoke("request-password-reset-otp", {
+        body: { email: forgotEmail, cnic: forgotCnic },
       });
-
       if (error) {
-        toast.error("Failed to send reset link. Please try again.");
+        toast.error("Failed to send reset code. Please try again.");
       } else {
-        toast.success("If an account exists, a password reset link has been sent to the registered email.");
-        setMode("login");
+        toast.success("If your details match our records, a 6-digit code has been sent to your email.");
+        setMode("reset");
       }
     } catch {
-      toast.error("Failed to send reset link. Please try again.");
+      toast.error("Failed to send reset code. Please try again.");
     }
 
     setLoading(false);
     refreshCaptcha();
+  };
+
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      toast.error("Enter the 6-digit code from your email.");
+      return;
+    }
+    if (newPwd.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+    if (newPwd !== confirmPwd) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-password-reset-otp", {
+        body: { email: forgotEmail, otp, newPassword: newPwd },
+      });
+      if (error || (data && data.error)) {
+        toast.error((data && data.error) || "Could not reset password.");
+      } else {
+        toast.success("Password changed successfully. Please log in.");
+        setMode("login");
+        setOtp(""); setNewPwd(""); setConfirmPwd("");
+        setIdentifier(forgotEmail);
+      }
+    } catch {
+      toast.error("Could not reset password.");
+    }
+    setLoading(false);
   };
 
   // Inline captcha block to prevent re-mount on each keystroke
@@ -201,27 +235,26 @@ const Login = () => {
 
           {mode === "forgot" && (
             <form onSubmit={handleForgotPassword} className="space-y-4">
-              <h2 className="text-2xl font-bold text-foreground text-center mb-4">Reset Password</h2>
+              <h2 className="text-2xl font-bold text-foreground text-center mb-4">Forgot Password</h2>
               <p className="text-sm text-muted-foreground text-center">
-                Enter your email address or registration number and we'll send a reset link to the registered email.
+                Enter your registered email and CNIC. We'll send a 6-digit verification code to your email.
               </p>
               <div className="space-y-2">
-                <Label htmlFor="reset-identifier">Email or Registration Number</Label>
-                <Input
-                  id="reset-identifier"
-                  type="text"
-                  placeholder="Enter email or registration number"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  required
-                />
+                <Label htmlFor="forgot-email">Email</Label>
+                <Input id="forgot-email" type="email" placeholder="your@email.com"
+                  value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="forgot-cnic">CNIC</Label>
+                <Input id="forgot-cnic" type="text" placeholder="35202-1234567-1"
+                  value={forgotCnic} onChange={(e) => setForgotCnic(e.target.value)} required />
               </div>
 
               {captchaBlock}
 
               <div className="flex items-center justify-between">
                 <Button type="submit" disabled={loading || !captchaVerified} className={!captchaVerified ? "opacity-50" : ""}>
-                  {loading ? "Sending..." : "Send Reset Link"}
+                  {loading ? "Sending..." : "Send Code"}
                 </Button>
                 <button
                   type="button"
@@ -229,6 +262,39 @@ const Login = () => {
                   className="text-sm text-primary hover:underline"
                 >
                   Back to Login
+                </button>
+              </div>
+            </form>
+          )}
+
+          {mode === "reset" && (
+            <form onSubmit={handleResetSubmit} className="space-y-4">
+              <h2 className="text-2xl font-bold text-foreground text-center mb-4">Enter Code & New Password</h2>
+              <p className="text-sm text-muted-foreground text-center">
+                Enter the 6-digit code sent to <b>{forgotEmail}</b>, then set your new password.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="otp">6-digit Code</Label>
+                <Input id="otp" type="text" inputMode="numeric" maxLength={6} placeholder="123456"
+                  value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-pwd">New Password</Label>
+                <Input id="new-pwd" type="password" value={newPwd}
+                  onChange={(e) => setNewPwd(e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-pwd">Confirm New Password</Label>
+                <Input id="confirm-pwd" type="password" value={confirmPwd}
+                  onChange={(e) => setConfirmPwd(e.target.value)} required />
+              </div>
+              <div className="flex items-center justify-between">
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Resetting..." : "Reset Password"}
+                </Button>
+                <button type="button" onClick={() => setMode("forgot")}
+                  className="text-sm text-primary hover:underline">
+                  Resend code
                 </button>
               </div>
             </form>
