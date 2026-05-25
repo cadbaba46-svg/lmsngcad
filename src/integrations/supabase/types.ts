@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_totp_secrets: {
+        Row: {
+          created_at: string
+          id: string
+          secret: string
+          updated_at: string
+          user_id: string
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          secret: string
+          updated_at?: string
+          user_id: string
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          secret?: string
+          updated_at?: string
+          user_id?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       challans: {
         Row: {
           amount: number
