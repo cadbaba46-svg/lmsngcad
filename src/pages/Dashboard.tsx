@@ -16,6 +16,7 @@ import DuesSummaryPanel from "@/components/DuesSummaryPanel";
 import CourseFreezePanel from "@/components/CourseFreezePanel";
 import SurveysForSubjectsPanel from "@/components/SurveysForSubjectsPanel";
 import ReportsPanel from "@/components/ReportsPanel";
+import ComplaintsPanel from "@/components/ComplaintsPanel";
 import ngcadLogo from "@/assets/ngcad-logo.png";
 import { LogOut } from "lucide-react";
 
@@ -24,6 +25,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [activeItem, setActiveItem] = useState("offered-subjects");
   const [profileName, setProfileName] = useState("");
+  const [studentFullName, setStudentFullName] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [isTeacher, setIsTeacher] = useState(false);
   const [history, setHistory] = useState<string[]>(["offered-subjects"]);
@@ -43,6 +45,7 @@ const Dashboard = () => {
         .maybeSingle()
         .then(({ data }) => {
           if (data?.full_name) setProfileName(data.roll_number || data.full_name);
+          if (data?.full_name) setStudentFullName(data.full_name);
         });
 
       supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data }) => {
@@ -115,6 +118,8 @@ const Dashboard = () => {
         return <SurveysForSubjectsPanel />;
       case "reports":
         return <ReportsPanel />;
+      case "complaints":
+        return <ComplaintsPanel />;
       case "teacher-courses":
         return <TeacherCoursesPanel />;
       case "teacher-students":
@@ -152,7 +157,13 @@ const Dashboard = () => {
           <div className="lms-sidebar flex items-center justify-center py-4 px-4">
             <img src={ngcadLogo} alt="Next Gen Cad Academy" className="h-20 w-20 object-contain" />
           </div>
-          <DashboardSidebar activeItem={activeItem} onItemClick={handleItemClick} isAdmin={isAdmin} isTeacher={isTeacher} />
+          <DashboardSidebar
+            activeItem={activeItem}
+            onItemClick={handleItemClick}
+            isAdmin={isAdmin}
+            isTeacher={isTeacher}
+            profileLabel={studentFullName || undefined}
+          />
         </div>
         <main className="flex-1 overflow-auto">{renderContent()}</main>
       </div>
