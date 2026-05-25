@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Copy, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList } from "lucide-react";
+import { UserPlus, Copy, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminSurveysPanel from "@/components/AdminSurveysPanel";
+import CredentialVaultPanel from "@/components/CredentialVaultPanel";
 
 interface Profile {
   id: string;
