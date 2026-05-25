@@ -191,6 +191,12 @@ const Dashboard = () => {
         </div>
         <main className="flex-1 overflow-auto">{renderContent()}</main>
       </div>
+      {lectureChecked && pendingLecture && (
+        <MandatoryLectureGate
+          lecture={pendingLecture}
+          onPassed={() => setPendingLecture(null)}
+        />
+      )}
     </div>
   );
 };
