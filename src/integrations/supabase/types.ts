@@ -223,6 +223,92 @@ export type Database = {
           },
         ]
       }
+      lecture_completions: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_score: number | null
+          lecture_id: string
+          passed: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_score?: number | null
+          lecture_id: string
+          passed?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_score?: number | null
+          lecture_id?: string
+          passed?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lecture_completions_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "mandatory_lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandatory_lectures: {
+        Row: {
+          course_id: string | null
+          created_at: string
+          description: string | null
+          duration_seconds: number
+          id: string
+          is_active: boolean
+          pass_threshold: number
+          title: string
+          updated_at: string
+          video_type: string
+          video_url: string
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number
+          id?: string
+          is_active?: boolean
+          pass_threshold?: number
+          title: string
+          updated_at?: string
+          video_type?: string
+          video_url: string
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number
+          id?: string
+          is_active?: boolean
+          pass_threshold?: number
+          title?: string
+          updated_at?: string
+          video_type?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
