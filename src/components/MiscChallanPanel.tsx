@@ -56,6 +56,7 @@ const MiscChallanPanel = () => {
     }
     setSubmitting(true);
     const { error } = await supabase.from("challans").insert({
+      challan_number: "",
       customer_name: form.customer_name,
       customer_email: form.customer_email,
       customer_phone: form.customer_phone,
