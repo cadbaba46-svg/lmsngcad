@@ -17,6 +17,7 @@ import CourseFreezePanel from "@/components/CourseFreezePanel";
 import SurveysForSubjectsPanel from "@/components/SurveysForSubjectsPanel";
 import ReportsPanel from "@/components/ReportsPanel";
 import ComplaintsPanel from "@/components/ComplaintsPanel";
+import MandatoryLectureGate from "@/components/MandatoryLectureGate";
 import ngcadLogo from "@/assets/ngcad-logo.png";
 import { LogOut } from "lucide-react";
 
@@ -29,6 +30,8 @@ const Dashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isTeacher, setIsTeacher] = useState(false);
   const [history, setHistory] = useState<string[]>(["offered-subjects"]);
+  const [pendingLecture, setPendingLecture] = useState<any>(null);
+  const [lectureChecked, setLectureChecked] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -65,6 +68,27 @@ const Dashboard = () => {
       });
     }
   }, [user]);
+
+  // Fetch the first uncompleted mandatory lecture (students only)
+  useEffect(() => {
+    if (!user || isAdmin || isTeacher) { setLectureChecked(true); return; }
+    (async () => {
+      const { data: lectures } = await supabase
+        .from("mandatory_lectures" as any)
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: true });
+      if (!lectures || lectures.length === 0) { setLectureChecked(true); return; }
+      const { data: completions } = await supabase
+        .from("lecture_completions" as any)
+        .select("lecture_id, passed")
+        .eq("user_id", user.id);
+      const passedIds = new Set((completions || []).filter((c: any) => c.passed).map((c: any) => c.lecture_id));
+      const next = (lectures as any[]).find((l) => !passedIds.has(l.id));
+      setPendingLecture(next || null);
+      setLectureChecked(true);
+    })();
+  }, [user, isAdmin, isTeacher]);
 
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
@@ -167,6 +191,12 @@ const Dashboard = () => {
         </div>
         <main className="flex-1 overflow-auto">{renderContent()}</main>
       </div>
+      {lectureChecked && pendingLecture && (
+        <MandatoryLectureGate
+          lecture={pendingLecture}
+          onPassed={() => setPendingLecture(null)}
+        />
+      )}
     </div>
   );
 };
