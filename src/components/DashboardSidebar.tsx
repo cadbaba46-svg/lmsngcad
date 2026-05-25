@@ -45,6 +45,7 @@ const studentSections: SidebarSection[] = [
       { label: "Student Services", id: "student-services" },
       { label: "Student Request", id: "student-request" },
       { label: "Course Freeze", id: "course-freeze" },
+      { label: "Complaints", id: "complaints" },
     ],
   },
   {
@@ -84,10 +85,19 @@ interface DashboardSidebarProps {
   onItemClick: (id: string) => void;
   isAdmin?: boolean;
   isTeacher?: boolean;
+  profileLabel?: string;
 }
 
-const DashboardSidebar = ({ activeItem, onItemClick, isAdmin, isTeacher }: DashboardSidebarProps) => {
-  const sections = isTeacher ? teacherSections : studentSections;
+const DashboardSidebar = ({ activeItem, onItemClick, isAdmin, isTeacher, profileLabel }: DashboardSidebarProps) => {
+  const baseSections = isTeacher ? teacherSections : studentSections;
+  const sections = profileLabel
+    ? baseSections.map((s) => ({
+        ...s,
+        items: s.items.map((i) =>
+          i.id === "student-profile" ? { ...i, label: profileLabel } : i
+        ),
+      }))
+    : baseSections;
 
   return (
     <aside className="lms-sidebar w-60 min-h-screen overflow-y-auto flex-shrink-0">

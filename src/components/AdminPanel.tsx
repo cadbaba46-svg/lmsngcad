@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Copy, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound } from "lucide-react";
+import { UserPlus, Copy, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminSurveysPanel from "@/components/AdminSurveysPanel";
 import CredentialVaultPanel from "@/components/CredentialVaultPanel";
+import AdminComplaintsPanel from "@/components/AdminComplaintsPanel";
 
 interface Profile {
   id: string;
@@ -277,6 +278,7 @@ const AdminPanel = () => {
           <TabsTrigger value="teachers" className="gap-2"><Users className="h-4 w-4" /> Teachers</TabsTrigger>
           <TabsTrigger value="courses" className="gap-2"><BookOpen className="h-4 w-4" /> Courses</TabsTrigger>
           <TabsTrigger value="surveys" className="gap-2"><ClipboardList className="h-4 w-4" /> Surveys</TabsTrigger>
+          <TabsTrigger value="complaints" className="gap-2"><MessageSquare className="h-4 w-4" /> Complaints</TabsTrigger>
           <TabsTrigger value="vault" className="gap-2"><KeyRound className="h-4 w-4" /> Vault</TabsTrigger>
         </TabsList>
 
@@ -652,6 +654,9 @@ const AdminPanel = () => {
         </TabsContent>
         <TabsContent value="surveys" className="space-y-4 mt-4">
           <AdminSurveysPanel />
+        </TabsContent>
+        <TabsContent value="complaints" className="space-y-4 mt-4">
+          <AdminComplaintsPanel />
         </TabsContent>
         <TabsContent value="vault" className="mt-4">
           <CredentialVaultPanel />
