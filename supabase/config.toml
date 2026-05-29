@@ -3,6 +3,8 @@ project_id = "mfjiskptanjgzcsxmmez"
 [functions]
   [functions.auth-email-hook]
     verify_jwt = false
+  [functions.delete-student-from-admission]
+    verify_jwt = false
   [functions.handle-email-suppression]
     verify_jwt = false
   [functions.handle-email-unsubscribe]
