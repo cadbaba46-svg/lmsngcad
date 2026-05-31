@@ -27,7 +27,7 @@ const Index = () => {
       <main>
       {/* Hero */}
       <section className="relative h-[420px] overflow-hidden">
-        <img src={heroBanner} alt="Campus" className="absolute inset-0 w-full h-full object-cover" />
+        <img src={heroBanner} alt="Next Gen Cad Academy campus" width="1920" height="420" fetchPriority="high" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0" style={{ background: "var(--hero-overlay)" }} />
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4">
           <motion.div
