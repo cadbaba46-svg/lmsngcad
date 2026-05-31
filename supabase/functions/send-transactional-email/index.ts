@@ -26,13 +26,35 @@ function generateToken(): string {
 }
 
 // Auth note: this function uses verify_jwt = true in config.toml, so Supabase's
-// gateway validates the caller's JWT (anon or service_role) before the request
-// reaches this code. No in-function auth check is needed.
+// gateway validates the caller's JWT. We additionally enforce that ONLY the
+// service_role can send transactional emails — otherwise anyone with the public
+// anon key could spam arbitrary recipients from our verified sender domain.
+function parseJwtRole(token: string): string | null {
+  try {
+    const payload = token.split('.')[1]
+    const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4)
+    const json = JSON.parse(atob(padded.replace(/-/g, '+').replace(/_/g, '/')))
+    return typeof json?.role === 'string' ? json.role : null
+  } catch {
+    return null
+  }
+}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
+  }
+
+  // Enforce service_role-only access
+  const authHeader = req.headers.get('Authorization') || ''
+  const token = authHeader.replace(/^Bearer\s+/i, '')
+  const role = token ? parseJwtRole(token) : null
+  if (role !== 'service_role') {
+    return new Response(
+      JSON.stringify({ error: 'Forbidden' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
