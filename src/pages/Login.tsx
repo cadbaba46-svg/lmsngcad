@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Helmet } from "react-helmet-async";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { RefreshCw, Check, ShieldCheck } from "lucide-react";
@@ -161,7 +162,7 @@ const Login = () => {
         <Label className="text-sm font-semibold flex items-center gap-1.5">
           <ShieldCheck className="h-4 w-4 text-primary" /> Verify you&apos;re human
         </Label>
-        <button type="button" onClick={refreshCaptcha} className="text-muted-foreground hover:text-foreground transition-colors">
+        <button type="button" onClick={refreshCaptcha} aria-label="Refresh captcha" className="text-muted-foreground hover:text-foreground transition-colors">
           <RefreshCw className="h-4 w-4" />
         </button>
       </div>
@@ -194,9 +195,18 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>Login — LMS NGCAD</title>
+        <meta name="description" content="Sign in to the LMS NGCAD learning management system using your registered email or registration number to access courses, fees, and student records." />
+        <link rel="canonical" href="https://lms.ngcad.org/login" />
+        <meta property="og:title" content="Login — LMS NGCAD" />
+        <meta property="og:description" content="Sign in to the LMS NGCAD learning management system to access your courses, fees, examinations, and student records." />
+        <meta property="og:url" content="https://lms.ngcad.org/login" />
+      </Helmet>
       <Navbar />
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
+          <h1 className="sr-only">Login to LMS NGCAD</h1>
           {mode === "login" && (
             <form onSubmit={handleLogin} className="space-y-4">
               <h2 className="text-2xl font-bold text-foreground text-center mb-4">Log in</h2>

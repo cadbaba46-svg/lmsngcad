@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Helmet } from "react-helmet-async";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -68,9 +69,15 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>Reset Password — LMS NGCAD</title>
+        <meta name="description" content="Set a new password for your LMS NGCAD account to regain secure access to your courses, fees, and student records." />
+        <meta name="robots" content="noindex" />
+      </Helmet>
       <Navbar />
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
+          <h1 className="sr-only">Reset Your Password</h1>
           {!ready ? (
             <div className="text-center space-y-4">
               <h2 className="text-2xl font-bold text-foreground">Loading...</h2>

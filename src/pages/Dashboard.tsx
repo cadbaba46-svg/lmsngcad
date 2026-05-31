@@ -20,6 +20,7 @@ import ComplaintsPanel from "@/components/ComplaintsPanel";
 import MandatoryLectureGate from "@/components/MandatoryLectureGate";
 import ngcadLogo from "@/assets/ngcad-logo.png";
 import { LogOut } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 
 const Dashboard = () => {
   const { user, signOut, loading } = useAuth();
@@ -163,6 +164,11 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>Dashboard — LMS NGCAD</title>
+        <meta name="description" content="Your LMS NGCAD dashboard — view enrolled courses, attendance, fee challans, surveys, and academic records for Next Gen Cad Academy." />
+        <meta name="robots" content="noindex" />
+      </Helmet>
       <div className="lms-navbar flex items-center gap-4 px-4 py-1.5 text-sm">
         <span className="font-medium">LMS</span>
         <a href="https://ngcad.org" target="_blank" rel="noopener noreferrer" className="opacity-70 hover:opacity-100 transition-opacity cursor-pointer">Portal</a>
@@ -170,7 +176,7 @@ const Dashboard = () => {
         <a href="https://fms.ngcad.org" target="_blank" rel="noopener noreferrer" className="opacity-70 hover:opacity-100 transition-opacity cursor-pointer">FMS</a>
         <div className="ml-auto flex items-center gap-3">
           <span className="font-medium">{profileName || user?.email}</span>
-          <button onClick={handleSignOut} className="opacity-70 hover:opacity-100 transition-opacity">
+          <button onClick={handleSignOut} aria-label="Sign out" className="opacity-70 hover:opacity-100 transition-opacity">
             <LogOut className="h-4 w-4" />
           </button>
         </div>
