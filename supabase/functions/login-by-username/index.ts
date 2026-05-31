@@ -53,6 +53,21 @@ Deno.serve(async (req) => {
       email = user.email;
     }
 
+    // Validate credentials server-side BEFORE returning the email to prevent
+    // username/email enumeration. Use the anon client so we don't create a session here.
+    const verifyClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
+    const { error: signInErr } = await verifyClient.auth.signInWithPassword({ email, password });
+    if (signInErr) {
+      return new Response(JSON.stringify({ error: "Invalid username or password" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ email }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
