@@ -483,6 +483,39 @@ export type Database = {
         }
         Relationships: []
       }
+      quiz_sessions: {
+        Row: {
+          consumed: boolean
+          created_at: string
+          expires_at: string
+          id: string
+          lecture_id: string
+          pass_threshold: number
+          questions: Json
+          user_id: string
+        }
+        Insert: {
+          consumed?: boolean
+          created_at?: string
+          expires_at?: string
+          id?: string
+          lecture_id: string
+          pass_threshold: number
+          questions: Json
+          user_id: string
+        }
+        Update: {
+          consumed?: boolean
+          created_at?: string
+          expires_at?: string
+          id?: string
+          lecture_id?: string
+          pass_threshold?: number
+          questions?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -669,6 +702,17 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      get_teacher_students: {
+        Args: { _course_ids: string[] }
+        Returns: {
+          course_id: string
+          department: string
+          full_name: string
+          roll_number: string
+          semester: string
+          user_id: string
+        }[]
       }
       has_role: {
         Args: {
