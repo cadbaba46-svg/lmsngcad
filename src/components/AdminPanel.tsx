@@ -23,7 +23,6 @@ interface Profile {
   father_name: string | null;
   phone: string | null;
   cnic: string | null;
-  generated_password: string | null;
   created_at: string;
 }
 
@@ -80,8 +79,9 @@ const AdminPanel = () => {
   const [assignTeacherId, setAssignTeacherId] = useState("");
   const [assignCourseId, setAssignCourseId] = useState("");
 
+  const PROFILE_COLUMNS = "id,user_id,full_name,email,department,semester,roll_number,father_name,phone,cnic,created_at";
   const fetchUsers = async () => {
-    const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).order("created_at", { ascending: false });
     setUsers((data || []) as unknown as Profile[]);
   };
 
@@ -94,7 +94,7 @@ const AdminPanel = () => {
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
     const teacherIds = (roles || []).filter((r) => (r.role as string) === "teacher").map((r) => r.user_id);
     if (teacherIds.length === 0) { setTeachers([]); return; }
-    const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", teacherIds);
+    const { data: profiles } = await supabase.from("profiles").select(PROFILE_COLUMNS).in("user_id", teacherIds);
     setTeachers(profiles || []);
   };
 
@@ -102,7 +102,7 @@ const AdminPanel = () => {
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
     const studentIds = (roles || []).filter((r) => (r.role as string) === "student").map((r) => r.user_id);
     if (studentIds.length === 0) { setStudents([]); return; }
-    const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", studentIds);
+    const { data: profiles } = await supabase.from("profiles").select(PROFILE_COLUMNS).in("user_id", studentIds);
     setStudents((profiles || []) as unknown as Profile[]);
   };
 
