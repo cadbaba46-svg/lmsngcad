@@ -23,7 +23,6 @@ interface Profile {
   father_name: string | null;
   phone: string | null;
   cnic: string | null;
-  generated_password: string | null;
   created_at: string;
 }
 
@@ -80,8 +79,9 @@ const AdminPanel = () => {
   const [assignTeacherId, setAssignTeacherId] = useState("");
   const [assignCourseId, setAssignCourseId] = useState("");
 
+  const PROFILE_COLUMNS = "id,user_id,full_name,email,department,semester,roll_number,father_name,phone,cnic,created_at";
   const fetchUsers = async () => {
-    const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).order("created_at", { ascending: false });
     setUsers((data || []) as unknown as Profile[]);
   };
 
@@ -94,7 +94,7 @@ const AdminPanel = () => {
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
     const teacherIds = (roles || []).filter((r) => (r.role as string) === "teacher").map((r) => r.user_id);
     if (teacherIds.length === 0) { setTeachers([]); return; }
-    const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", teacherIds);
+    const { data: profiles } = await supabase.from("profiles").select(PROFILE_COLUMNS).in("user_id", teacherIds);
     setTeachers(profiles || []);
   };
 
@@ -102,7 +102,7 @@ const AdminPanel = () => {
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
     const studentIds = (roles || []).filter((r) => (r.role as string) === "student").map((r) => r.user_id);
     if (studentIds.length === 0) { setStudents([]); return; }
-    const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", studentIds);
+    const { data: profiles } = await supabase.from("profiles").select(PROFILE_COLUMNS).in("user_id", studentIds);
     setStudents((profiles || []) as unknown as Profile[]);
   };
 
@@ -370,7 +370,7 @@ const AdminPanel = () => {
                 <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium text-foreground">{selectedUser.phone || "—"}</span></div>
                 <div><span className="text-muted-foreground">CNIC:</span> <span className="font-medium text-foreground">{selectedUser.cnic || "—"}</span></div>
                 <div><span className="text-muted-foreground">Role:</span> <span className="font-medium text-foreground capitalize">{selectedUserRole}</span></div>
-                <div><span className="text-muted-foreground">Password:</span> <span className="font-medium text-foreground font-mono">{(selectedUser as any).generated_password || "—"}</span></div>
+                <div className="md:col-span-2 text-xs text-muted-foreground italic">Passwords are only viewable via the Credential Vault (requires password + 2FA).</div>
                 <div><span className="text-muted-foreground">Enrolled Course:</span> <span className="font-medium text-foreground">{selectedUserEnrollment?.courses?.name || "None"}</span></div>
                 <div><span className="text-muted-foreground">Payment:</span> <span className={`font-medium ${selectedUserEnrollment?.challan_paid ? "text-green-600" : "text-destructive"}`}>{selectedUserEnrollment ? (selectedUserEnrollment.challan_paid ? "Paid" : "Unpaid") : "N/A"}</span></div>
                 <div><span className="text-muted-foreground">Created:</span> <span className="font-medium text-foreground">{new Date(selectedUser.created_at).toLocaleDateString()}</span></div>
@@ -443,15 +443,14 @@ const AdminPanel = () => {
                     <th className="text-left p-3 font-medium text-muted-foreground">Reg. No</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Father Name</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Phone</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">CNIC</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Password</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Created</th>
+                     <th className="text-left p-3 font-medium text-muted-foreground">CNIC</th>
+                     <th className="text-left p-3 font-medium text-muted-foreground">Created</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {students.length === 0 ? (
-                    <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No students found.</td></tr>
+                   {students.length === 0 ? (
+                     <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No students found.</td></tr>
                   ) : (
                     students.map((s) => (
                       <tr key={s.id} className="border-t border-border hover:bg-muted/50">
@@ -460,9 +459,8 @@ const AdminPanel = () => {
                         <td className="p-3 text-muted-foreground">{s.roll_number || "—"}</td>
                         <td className="p-3 text-muted-foreground">{s.father_name || "—"}</td>
                         <td className="p-3 text-muted-foreground">{s.phone || "—"}</td>
-                        <td className="p-3 text-muted-foreground">{s.cnic || "—"}</td>
-                        <td className="p-3 text-muted-foreground font-mono text-xs">{s.generated_password || "—"}</td>
-                        <td className="p-3 text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</td>
+                         <td className="p-3 text-muted-foreground">{s.cnic || "—"}</td>
+                         <td className="p-3 text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</td>
                         <td className="p-3">
                           <Button
                             variant="destructive"
