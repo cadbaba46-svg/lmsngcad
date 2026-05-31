@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Shield, Lock, KeyRound, Copy, Search, ShieldCheck, RotateCcw } from "lucide-react";
-import * as OTPAuth from "otpauth";
 import QRCode from "qrcode";
 
 type Stage = "loading" | "setup" | "locked" | "unlocked";
@@ -18,8 +17,6 @@ interface UserRow {
   roll_number: string | null;
   generated_password: string | null;
 }
-
-const ISSUER = "NGCAD LMS Vault";
 
 const CredentialVaultPanel = () => {
   const { user } = useAuth();
@@ -33,84 +30,65 @@ const CredentialVaultPanel = () => {
   const [search, setSearch] = useState("");
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
 
+  const callVault = async (body: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke("vault-manage", { body });
+    if (error) throw new Error(error.message);
+    if (data?.error) throw new Error(data.error);
+    return data;
+  };
+
+  const beginSetup = async () => {
+    const data = await callVault({ action: "setup_init" });
+    setSecret(data.secret);
+    const url = await QRCode.toDataURL(data.otpauth_url);
+    setQrDataUrl(url);
+    setStage("setup");
+  };
+
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase
-        .from("admin_totp_secrets" as any)
-        .select("secret, verified")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!data || !(data as any).verified) {
-        // generate new secret (or reuse pending one)
-        let s = (data as any)?.secret as string | undefined;
-        if (!s) {
-          s = new OTPAuth.Secret({ size: 20 }).base32;
-          await supabase.from("admin_totp_secrets" as any).upsert(
-            { user_id: user.id, secret: s, verified: false },
-            { onConflict: "user_id" }
-          );
+      try {
+        const status = await callVault({ action: "status" });
+        if (status.verified) {
+          setStage("locked");
+        } else {
+          await beginSetup();
         }
-        setSecret(s);
-        const totp = new OTPAuth.TOTP({ issuer: ISSUER, label: user.email || "admin", secret: s });
-        const url = totp.toString();
-        QRCode.toDataURL(url).then(setQrDataUrl);
-        setStage("setup");
-      } else {
-        setSecret((data as any).secret);
-        setStage("locked");
+      } catch (e: any) {
+        toast.error(e.message || "Failed to load vault");
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const verifyTotp = (s: string, code: string) => {
-    const totp = new OTPAuth.TOTP({ issuer: ISSUER, label: user?.email || "admin", secret: s });
-    const delta = totp.validate({ token: code.replace(/\s+/g, ""), window: 1 });
-    return delta !== null;
-  };
-
   const completeSetup = async () => {
-    if (!user) return;
     setVerifying(true);
     try {
-      if (!verifyTotp(secret, otp)) {
-        toast.error("Invalid code. Try again.");
-        return;
-      }
-      await supabase.from("admin_totp_secrets" as any).update({ verified: true }).eq("user_id", user.id);
+      await callVault({ action: "setup_verify", otp });
       toast.success("Two-factor authentication enabled.");
       setOtp("");
+      setSecret("");
+      setQrDataUrl("");
       setStage("locked");
+    } catch (e: any) {
+      toast.error(e.message || "Invalid code. Try again.");
     } finally {
       setVerifying(false);
     }
   };
 
   const unlock = async () => {
-    if (!user?.email) return;
     setVerifying(true);
     try {
-      // Verify password by re-authenticating (does not affect existing session)
-      const { error: pwErr } = await supabase.auth.signInWithPassword({ email: user.email, password });
-      if (pwErr) {
-        toast.error("Incorrect password.");
-        return;
-      }
-      if (!verifyTotp(secret, otp)) {
-        toast.error("Invalid 2FA code.");
-        return;
-      }
-      // Load all profiles
-      const { data } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, email, roll_number, generated_password")
-        .order("created_at", { ascending: false });
-      setRows((data || []) as UserRow[]);
+      const data = await callVault({ action: "unlock", password, otp });
+      setRows((data.rows || []) as UserRow[]);
       setPassword("");
       setOtp("");
       setStage("unlocked");
       toast.success("Vault unlocked.");
+    } catch (e: any) {
+      toast.error(e.message || "Unlock failed");
     } finally {
       setVerifying(false);
     }
@@ -123,15 +101,16 @@ const CredentialVaultPanel = () => {
   };
 
   const resetTotp = async () => {
-    if (!user) return;
     if (!confirm("Reset 2FA? You'll need to scan a new QR code.")) return;
-    await supabase.from("admin_totp_secrets" as any).delete().eq("user_id", user.id);
-    const s = new OTPAuth.Secret({ size: 20 }).base32;
-    await supabase.from("admin_totp_secrets" as any).insert({ user_id: user.id, secret: s, verified: false });
-    setSecret(s);
-    const totp = new OTPAuth.TOTP({ issuer: ISSUER, label: user.email || "admin", secret: s });
-    QRCode.toDataURL(totp.toString()).then(setQrDataUrl);
-    setStage("setup");
+    try {
+      const data = await callVault({ action: "reset" });
+      setSecret(data.secret);
+      const url = await QRCode.toDataURL(data.otpauth_url);
+      setQrDataUrl(url);
+      setStage("setup");
+    } catch (e: any) {
+      toast.error(e.message || "Reset failed");
+    }
   };
 
   const copy = (text: string) => {
