@@ -50,13 +50,11 @@ const TeacherAttendancePanel = () => {
         return;
       }
 
-      const userIds = enrollments.map((e) => e.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, roll_number")
-        .in("user_id", userIds);
+      const { data: profiles } = await (supabase as any).rpc("get_teacher_students", {
+        _course_ids: [selectedCourse],
+      });
 
-      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p]));
+      const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.user_id, p]));
 
       const mapped = enrollments.map((e) => ({
         ...e,

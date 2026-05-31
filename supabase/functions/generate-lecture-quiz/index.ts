@@ -39,10 +39,11 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    const userId = claimsData.claims.sub as string;
 
-    const { title, description, video_url, video_type } = await req.json();
-    if (!title || !video_url) {
-      return new Response(JSON.stringify({ error: 'title and video_url required' }), {
+    const { title, description, video_url, video_type, lecture_id } = await req.json();
+    if (!title || !video_url || !lecture_id) {
+      return new Response(JSON.stringify({ error: 'title, video_url and lecture_id required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -127,7 +128,43 @@ Return JSON with this exact shape:
       return { question: q.question, options: newOptions, correct_index: newCorrect };
     });
 
-    return new Response(JSON.stringify({ questions: shuffle(shuffled) }), {
+    const finalQuestions = shuffle(shuffled);
+
+    // Look up lecture pass_threshold (service role) and persist session server-side
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    const { data: lecture } = await admin
+      .from('mandatory_lectures')
+      .select('pass_threshold, is_active')
+      .eq('id', lecture_id)
+      .maybeSingle();
+    if (!lecture || !lecture.is_active) {
+      return new Response(JSON.stringify({ error: 'Lecture not found' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { data: session, error: sessErr } = await admin
+      .from('quiz_sessions')
+      .insert({
+        user_id: userId,
+        lecture_id,
+        questions: finalQuestions,
+        pass_threshold: lecture.pass_threshold,
+      })
+      .select('id')
+      .single();
+    if (sessErr || !session) {
+      return new Response(JSON.stringify({ error: 'Failed to create quiz session' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Strip correct_index from client-facing payload
+    const publicQuestions = finalQuestions.map((q) => ({ question: q.question, options: q.options }));
+    return new Response(JSON.stringify({ session_id: session.id, questions: publicQuestions }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {

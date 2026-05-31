@@ -18,7 +18,6 @@ interface Lecture {
 interface MCQ {
   question: string;
   options: string[];
-  correct_index: number;
 }
 
 type Phase = "watching" | "loading-quiz" | "quiz" | "result";
@@ -37,6 +36,8 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
   const [questions, setQuestions] = useState<MCQ[]>([]);
   const [answers, setAnswers] = useState<number[]>([]);
   const [score, setScore] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -93,6 +94,7 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
     try {
       const { data, error } = await supabase.functions.invoke("generate-lecture-quiz", {
         body: {
+          lecture_id: lecture.id,
           title: lecture.title,
           description: lecture.description,
           video_url: lecture.video_url,
@@ -106,6 +108,7 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
       }
       setQuestions(data.questions);
       setAnswers(new Array(data.questions.length).fill(-1));
+      setSessionId(data.session_id);
       setPhase("quiz");
     } catch (e: any) {
       toast.error(e.message || "Failed to generate quiz.");
@@ -114,41 +117,31 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
   }, [lecture]);
 
   const submitQuiz = async () => {
-    if (!user) return;
+    if (!user || !sessionId) return;
     if (answers.some((a) => a < 0)) { toast.error("Answer all questions"); return; }
     setSubmitting(true);
-    const correct = answers.reduce((acc, a, i) => acc + (a === questions[i].correct_index ? 1 : 0), 0);
-    setScore(correct);
-    const passed = correct >= lecture.pass_threshold;
-
-    // Upsert completion
-    const { data: existing } = await supabase
-      .from("lecture_completions" as any)
-      .select("attempts")
-      .eq("user_id", user.id)
-      .eq("lecture_id", lecture.id)
-      .maybeSingle();
-    const attempts = ((existing as any)?.attempts || 0) + 1;
-
-    await supabase.from("lecture_completions" as any).upsert(
-      {
-        user_id: user.id,
-        lecture_id: lecture.id,
-        attempts,
-        last_score: correct,
-        passed,
-        completed_at: passed ? new Date().toISOString() : null,
-      },
-      { onConflict: "user_id,lecture_id" }
-    );
-    setSubmitting(false);
-    setPhase("result");
+    try {
+      const { data, error } = await supabase.functions.invoke("submit-lecture-quiz", {
+        body: { session_id: sessionId, answers },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || "Failed to submit quiz.");
+        return;
+      }
+      setScore(data.score);
+      setTotal(data.total);
+      setPhase("result");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const retake = () => {
     setAnswers([]);
     setQuestions([]);
     setScore(0);
+    setTotal(0);
+    setSessionId(null);
     setWarning(null);
     setVideoEnded(false);
     setWatchedSeconds(0);
@@ -265,14 +258,14 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
                 {passed ? (
                   <>
                     <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto" />
-                    <h3 className="text-2xl font-bold text-foreground">Passed! Score: {score}/{questions.length}</h3>
+                    <h3 className="text-2xl font-bold text-foreground">Passed! Score: {score}/{total}</h3>
                     <p className="text-muted-foreground">Your dashboard is now unlocked.</p>
                     <Button onClick={onPassed} size="lg">Enter LMS</Button>
                   </>
                 ) : (
                   <>
                     <AlertTriangle className="h-16 w-16 text-amber-500 mx-auto" />
-                    <h3 className="text-2xl font-bold text-foreground">Score: {score}/{questions.length}</h3>
+                    <h3 className="text-2xl font-bold text-foreground">Score: {score}/{total}</h3>
                     <p className="text-muted-foreground">You need {lecture.pass_threshold} to pass. Try again with fresh questions.</p>
                     <Button onClick={retake} size="lg" className="gap-2">
                       <RotateCw className="h-4 w-4" /> Retake

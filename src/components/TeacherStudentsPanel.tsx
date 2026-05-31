@@ -36,14 +36,12 @@ const TeacherStudentsPanel = () => {
         return;
       }
 
-      // Get profiles for enrolled users
-      const userIds = enrollments.map((e) => e.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, roll_number, department, semester")
-        .in("user_id", userIds);
+      // Safe RPC: returns only non-sensitive columns for students in teacher's courses
+      const { data: profiles } = await (supabase as any).rpc("get_teacher_students", {
+        _course_ids: courseIds,
+      });
 
-      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p]));
+      const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.user_id, p]));
       const courseMap = Object.fromEntries(assignments.map((a: any) => [a.course_id, a.courses?.name]));
 
       setStudents(
