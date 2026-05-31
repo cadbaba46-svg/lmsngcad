@@ -84,7 +84,8 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("request-password-reset-otp error", err);
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    console.error('request-password-reset-otp error', err);
+    return new Response(JSON.stringify({ error: 'An unexpected error occurred' }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

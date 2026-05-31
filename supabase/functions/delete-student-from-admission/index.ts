@@ -174,8 +174,9 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
+    console.error('delete-student-from-admission error', err);
     return new Response(
-      JSON.stringify({ ok: false, error: err?.message ?? String(err), errors }),
+      JSON.stringify({ ok: false, error: 'An unexpected error occurred', errors }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

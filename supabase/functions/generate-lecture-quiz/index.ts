@@ -41,9 +41,9 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    const { title, description, video_url, video_type, lecture_id } = await req.json();
-    if (!title || !video_url || !lecture_id) {
-      return new Response(JSON.stringify({ error: 'title, video_url and lecture_id required' }), {
+    const { lecture_id } = await req.json();
+    if (!lecture_id || typeof lecture_id !== 'string') {
+      return new Response(JSON.stringify({ error: 'lecture_id required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -54,6 +54,26 @@ Deno.serve(async (req) => {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Fetch authoritative lecture content from DB — never trust client-supplied title/description/video_url
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    const { data: lecture } = await admin
+      .from('mandatory_lectures')
+      .select('id, title, description, video_url, video_type, pass_threshold, is_active')
+      .eq('id', lecture_id)
+      .maybeSingle();
+    if (!lecture || !lecture.is_active) {
+      return new Response(JSON.stringify({ error: 'Lecture not found' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const title = lecture.title;
+    const description = lecture.description;
+    const video_url = lecture.video_url;
+    const video_type = lecture.video_type;
 
     const seed = Math.random().toString(36).slice(2, 10);
     const sysPrompt = `You are an expert instructional designer. Generate exactly 10 multiple-choice questions strictly derived from the actual content, topics, concepts, and details of the given video lecture. Each question must have 4 plausible options with exactly one correct answer. Questions must be specific to the lecture content — not generic. Vary difficulty. Randomize phrasing (seed:${seed}).`;
@@ -91,6 +111,7 @@ Return JSON with this exact shape:
 
     if (!aiRes.ok) {
       const text = await aiRes.text();
+      console.error('AI generation failure', aiRes.status, text);
       if (aiRes.status === 429) {
         return new Response(JSON.stringify({ error: 'AI rate limit exceeded. Try again shortly.' }), {
           status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -101,7 +122,7 @@ Return JSON with this exact shape:
           status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      return new Response(JSON.stringify({ error: 'AI generation failed', detail: text }), {
+      return new Response(JSON.stringify({ error: 'AI generation failed' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -130,22 +151,6 @@ Return JSON with this exact shape:
 
     const finalQuestions = shuffle(shuffled);
 
-    // Look up lecture pass_threshold (service role) and persist session server-side
-    const admin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
-    const { data: lecture } = await admin
-      .from('mandatory_lectures')
-      .select('pass_threshold, is_active')
-      .eq('id', lecture_id)
-      .maybeSingle();
-    if (!lecture || !lecture.is_active) {
-      return new Response(JSON.stringify({ error: 'Lecture not found' }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const { data: session, error: sessErr } = await admin
       .from('quiz_sessions')
       .insert({
@@ -168,7 +173,8 @@ Return JSON with this exact shape:
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    console.error('generate-lecture-quiz error', err);
+    return new Response(JSON.stringify({ error: 'An unexpected error occurred' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

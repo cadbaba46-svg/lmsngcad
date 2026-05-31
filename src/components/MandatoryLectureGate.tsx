@@ -93,13 +93,7 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
     setPhase("loading-quiz");
     try {
       const { data, error } = await supabase.functions.invoke("generate-lecture-quiz", {
-        body: {
-          lecture_id: lecture.id,
-          title: lecture.title,
-          description: lecture.description,
-          video_url: lecture.video_url,
-          video_type: lecture.video_type,
-        },
+        body: { lecture_id: lecture.id },
       });
       if (error || data?.error) {
         toast.error(data?.error || "Failed to generate quiz. Try again.");

@@ -111,6 +111,7 @@ Deno.serve(async (req) => {
 
     return jsonRes({ error: 'Unknown action' }, 400);
   } catch (err) {
-    return jsonRes({ error: (err as Error).message }, 500);
+    console.error('vault-manage error', err);
+    return jsonRes({ error: 'An unexpected error occurred' }, 500);
   }
 });
