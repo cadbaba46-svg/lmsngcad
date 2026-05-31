@@ -443,15 +443,14 @@ const AdminPanel = () => {
                     <th className="text-left p-3 font-medium text-muted-foreground">Reg. No</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Father Name</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Phone</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">CNIC</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Password</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Created</th>
+                     <th className="text-left p-3 font-medium text-muted-foreground">CNIC</th>
+                     <th className="text-left p-3 font-medium text-muted-foreground">Created</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {students.length === 0 ? (
-                    <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No students found.</td></tr>
+                   {students.length === 0 ? (
+                     <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No students found.</td></tr>
                   ) : (
                     students.map((s) => (
                       <tr key={s.id} className="border-t border-border hover:bg-muted/50">
@@ -460,9 +459,8 @@ const AdminPanel = () => {
                         <td className="p-3 text-muted-foreground">{s.roll_number || "—"}</td>
                         <td className="p-3 text-muted-foreground">{s.father_name || "—"}</td>
                         <td className="p-3 text-muted-foreground">{s.phone || "—"}</td>
-                        <td className="p-3 text-muted-foreground">{s.cnic || "—"}</td>
-                        <td className="p-3 text-muted-foreground font-mono text-xs">{s.generated_password || "—"}</td>
-                        <td className="p-3 text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</td>
+                         <td className="p-3 text-muted-foreground">{s.cnic || "—"}</td>
+                         <td className="p-3 text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</td>
                         <td className="p-3">
                           <Button
                             variant="destructive"
