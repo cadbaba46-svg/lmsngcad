@@ -1,0 +1,15 @@
+# LMS NGCAD
+
+> Learning Management System for Next Gen Cad Academy — manages student records, semester planning, examinations, fees, and course enrollments.
+
+LMS NGCAD is the official Learning Management System for Next Gen Cad Academy (NGCAD). Access is limited to enrolled students and faculty; public registration is disabled.
+
+## Pages
+
+- [Home](/): Overview of the LMS, announcements, and examination news.
+- [Login](/login): Sign in for enrolled students, teachers, and administrators.
+
+## Optional
+
+- [Next Gen Cad Academy](https://ngcad.org): Main academy website.
+- [Fee Management System](https://fms.ngcad.org): Companion system for fee challans and billing.
