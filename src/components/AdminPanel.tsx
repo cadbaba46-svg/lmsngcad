@@ -370,7 +370,7 @@ const AdminPanel = () => {
                 <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium text-foreground">{selectedUser.phone || "—"}</span></div>
                 <div><span className="text-muted-foreground">CNIC:</span> <span className="font-medium text-foreground">{selectedUser.cnic || "—"}</span></div>
                 <div><span className="text-muted-foreground">Role:</span> <span className="font-medium text-foreground capitalize">{selectedUserRole}</span></div>
-                <div><span className="text-muted-foreground">Password:</span> <span className="font-medium text-foreground font-mono">{(selectedUser as any).generated_password || "—"}</span></div>
+                <div className="md:col-span-2 text-xs text-muted-foreground italic">Passwords are only viewable via the Credential Vault (requires password + 2FA).</div>
                 <div><span className="text-muted-foreground">Enrolled Course:</span> <span className="font-medium text-foreground">{selectedUserEnrollment?.courses?.name || "None"}</span></div>
                 <div><span className="text-muted-foreground">Payment:</span> <span className={`font-medium ${selectedUserEnrollment?.challan_paid ? "text-green-600" : "text-destructive"}`}>{selectedUserEnrollment ? (selectedUserEnrollment.challan_paid ? "Paid" : "Unpaid") : "N/A"}</span></div>
                 <div><span className="text-muted-foreground">Created:</span> <span className="font-medium text-foreground">{new Date(selectedUser.created_at).toLocaleDateString()}</span></div>
