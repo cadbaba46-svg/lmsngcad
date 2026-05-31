@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Helmet } from "react-helmet-async";
 import { BookOpen, Calendar, GraduationCap, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -14,8 +15,16 @@ const features = [
 const Index = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>LMS NGCAD — Learning Management System</title>
+        <meta name="description" content="Manage student records, semester planning, examinations, fees, and course enrollments with the Next Gen Cad Academy learning management system." />
+        <link rel="canonical" href="https://lms.ngcad.org/" />
+        <meta property="og:title" content="LMS NGCAD — Learning Management System" />
+        <meta property="og:description" content="Manage student records, semester planning, examinations, fees, and course enrollments with the Next Gen Cad Academy learning management system." />
+        <meta property="og:url" content="https://lms.ngcad.org/" />
+      </Helmet>
       <Navbar />
-
+      <main>
       {/* Hero */}
       <section className="relative h-[420px] overflow-hidden">
         <img src={heroBanner} alt="Campus" className="absolute inset-0 w-full h-full object-cover" />
@@ -26,7 +35,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
           >
-            <h1 className="text-3xl md:text-5xl font-bold text-primary-foreground mb-4" style={{ fontFamily: "var(--font-display)" }}>
+          <h1 className="text-3xl md:text-5xl font-bold text-primary-foreground mb-4" style={{ fontFamily: "var(--font-display)" }}>
               Learning Management System
             </h1>
             <p className="max-w-2xl text-primary-foreground/90 text-base md:text-lg leading-relaxed">
@@ -53,13 +62,13 @@ const Index = () => {
               className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
             >
               <f.icon className="h-8 w-8 text-primary mb-3" />
-              <h3 className="text-base font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-display)" }}>{f.title}</h3>
+              <h2 className="text-base font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-display)" }}>{f.title}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
             </motion.div>
           ))}
         </div>
       </section>
-
+      </main>
       <Footer />
     </div>
   );
