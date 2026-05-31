@@ -24,6 +24,16 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Shared-secret auth for cross-project (FMS) calls
+  const expected = Deno.env.get("FMS_API_SECRET");
+  const provided = req.headers.get("x-fms-api-secret") ?? req.headers.get("X-FMS-API-Secret");
+  if (!expected || provided !== expected) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
