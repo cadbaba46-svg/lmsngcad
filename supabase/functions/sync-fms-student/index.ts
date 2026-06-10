@@ -88,9 +88,12 @@ Deno.serve(async (req) => {
           cnic,
           roll_number: regNumber,
           must_change_password: true,
-          generated_password: password,
         })
         .eq("user_id", data.user.id);
+
+      await supabaseAdmin
+        .from("profile_credentials")
+        .upsert({ user_id: data.user.id, generated_password: password }, { onConflict: "user_id" });
 
       // Set role to student
       await supabaseAdmin
