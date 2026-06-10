@@ -24,6 +24,7 @@ const Login = () => {
   const [mode, setMode] = useState<"login" | "forgot" | "reset">("login");
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotCnic, setForgotCnic] = useState("");
+  const [adminFlow, setAdminFlow] = useState(false);
   const [otp, setOtp] = useState("");
   const [newPwd, setNewPwd] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
@@ -106,7 +107,7 @@ const Login = () => {
 
     try {
       const { error } = await supabase.functions.invoke("request-password-reset-otp", {
-        body: { email: forgotEmail, cnic: forgotCnic },
+        body: { email: forgotEmail, cnic: forgotCnic, adminFlow },
       });
       if (error) {
         toast.error("Failed to send reset code. Please try again.");
@@ -234,10 +235,19 @@ const Login = () => {
                 </Button>
                 <button
                   type="button"
-                  onClick={() => { setMode("forgot"); refreshCaptcha(); }}
+                  onClick={() => { setMode("forgot"); setAdminFlow(false); refreshCaptcha(); }}
                   className="text-sm text-primary hover:underline"
                 >
                   Forgot Password?
+                </button>
+              </div>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => { setMode("forgot"); setAdminFlow(true); refreshCaptcha(); }}
+                  className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                >
+                  Admin password reset
                 </button>
               </div>
             </form>
@@ -245,20 +255,26 @@ const Login = () => {
 
           {mode === "forgot" && (
             <form onSubmit={handleForgotPassword} className="space-y-4">
-              <h2 className="text-2xl font-bold text-foreground text-center mb-4">Forgot Password</h2>
+              <h2 className="text-2xl font-bold text-foreground text-center mb-4">
+                {adminFlow ? "Admin Password Reset" : "Forgot Password"}
+              </h2>
               <p className="text-sm text-muted-foreground text-center">
-                Enter your registered email and CNIC. We'll send a 6-digit verification code to your email.
+                {adminFlow
+                  ? "Enter the registered admin email. We'll send a 6-digit verification code to that email."
+                  : "Enter your registered email and CNIC. We'll send a 6-digit verification code to your email."}
               </p>
               <div className="space-y-2">
                 <Label htmlFor="forgot-email">Email</Label>
                 <Input id="forgot-email" type="email" placeholder="your@email.com"
                   value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="forgot-cnic">CNIC</Label>
-                <Input id="forgot-cnic" type="text" placeholder="35202-1234567-1"
-                  value={forgotCnic} onChange={(e) => setForgotCnic(e.target.value)} required />
-              </div>
+              {!adminFlow && (
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-cnic">CNIC</Label>
+                  <Input id="forgot-cnic" type="text" placeholder="35202-1234567-1"
+                    value={forgotCnic} onChange={(e) => setForgotCnic(e.target.value)} required />
+                </div>
+              )}
 
               {captchaBlock}
 
@@ -268,7 +284,7 @@ const Login = () => {
                 </Button>
                 <button
                   type="button"
-                  onClick={() => { setMode("login"); refreshCaptcha(); }}
+                  onClick={() => { setMode("login"); setAdminFlow(false); refreshCaptcha(); }}
                   className="text-sm text-primary hover:underline"
                 >
                   Back to Login

@@ -83,6 +83,7 @@ Deno.serve(async (req) => {
         .from("profiles")
         .update({
           full_name: name,
+          email,
           father_name,
           phone,
           cnic,
