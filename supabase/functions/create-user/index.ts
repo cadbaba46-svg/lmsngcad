@@ -82,7 +82,6 @@ Deno.serve(async (req) => {
         full_name,
         email,
         must_change_password: true,
-        generated_password: password,
       };
       if (roll_number) profileUpdate.roll_number = roll_number;
       if (father_name) profileUpdate.father_name = father_name;
@@ -93,6 +92,10 @@ Deno.serve(async (req) => {
         .from("profiles")
         .update(profileUpdate)
         .eq("user_id", data.user.id);
+
+      await supabaseAdmin
+        .from("profile_credentials")
+        .upsert({ user_id: data.user.id, generated_password: password }, { onConflict: "user_id" });
 
       const targetRole = role === "teacher" ? "teacher" : role === "student" ? "student" : "user";
       await supabaseAdmin
