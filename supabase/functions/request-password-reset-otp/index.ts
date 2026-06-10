@@ -28,21 +28,36 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const email = (body.email || "").trim().toLowerCase();
     const cnic = (body.cnic || "").trim();
+    const isAdminFlow = !!body.adminFlow;
 
-    if (!email || !cnic) {
+    if (!email || (!cnic && !isAdminFlow)) {
       return new Response(JSON.stringify({ error: "Email and CNIC are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Look up profile by email + cnic
-    const { data: profile } = await admin
+    // Look up profile by email (+ cnic for non-admin flow)
+    let profileQuery = admin
       .from("profiles")
       .select("user_id, full_name, email, cnic")
-      .ilike("email", email)
-      .eq("cnic", cnic)
-      .maybeSingle();
+      .ilike("email", email);
+    if (!isAdminFlow) profileQuery = profileQuery.eq("cnic", cnic);
+    const { data: profile } = await profileQuery.maybeSingle();
+
+    // For admin flow, require the matched user to actually have the admin role.
+    if (isAdminFlow && profile) {
+      const { data: isAdmin } = await admin.rpc("has_role", {
+        _user_id: profile.user_id,
+        _role: "admin",
+      });
+      if (!isAdmin) {
+        // Don't reveal — respond success to avoid enumeration
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     // Always respond success to avoid enumeration
     if (!profile) {
