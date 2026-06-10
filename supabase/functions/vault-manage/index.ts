@@ -102,11 +102,21 @@ Deno.serve(async (req) => {
       const delta = totp.validate({ token: String(otp).replace(/\s+/g, ''), window: 1 });
       if (delta === null) return jsonRes({ error: 'Invalid 2FA code' }, 401);
 
-      const { data: rows } = await admin
+      const { data: profiles } = await admin
         .from('profiles')
-        .select('user_id, full_name, email, roll_number, generated_password')
+        .select('user_id, full_name, email, roll_number')
         .order('created_at', { ascending: false });
-      return jsonRes({ rows: rows || [] });
+      const ids = (profiles || []).map((p: any) => p.user_id);
+      const { data: creds } = await admin
+        .from('profile_credentials')
+        .select('user_id, generated_password')
+        .in('user_id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000']);
+      const credMap = new Map((creds || []).map((c: any) => [c.user_id, c.generated_password]));
+      const rows = (profiles || []).map((p: any) => ({
+        ...p,
+        generated_password: credMap.get(p.user_id) ?? null,
+      }));
+      return jsonRes({ rows });
     }
 
     return jsonRes({ error: 'Unknown action' }, 400);

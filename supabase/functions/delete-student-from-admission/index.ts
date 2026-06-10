@@ -43,18 +43,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Find matching profile(s)
-    let query = supabase.from("profiles").select("user_id, email, cnic");
-    if (cnic && email) {
-      query = query.or(`cnic.eq.${cnic},email.eq.${email}`);
-    } else if (cnic) {
-      query = query.eq("cnic", cnic);
-    } else {
-      query = query.eq("email", email!);
+    // Validate inputs to prevent PostgREST filter injection
+    const cnicValid = cnic && /^[0-9]{5}-[0-9]{7}-[0-9]$/.test(cnic) ? cnic : undefined;
+    const emailValid = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254 ? email : undefined;
+    if (!cnicValid && !emailValid) {
+      return new Response(
+        JSON.stringify({ error: "Invalid cnic or email format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const { data: profiles, error: profileErr } = await query;
-    if (profileErr) errors.lookup = profileErr.message;
+    // Find matching profile(s) — run separate queries instead of interpolating into .or()
+    const profileMap = new Map<string, { user_id: string; email: string | null; cnic: string | null }>();
+    if (cnicValid) {
+      const { data, error } = await supabase
+        .from("profiles").select("user_id, email, cnic").eq("cnic", cnicValid);
+      if (error) errors.lookup_cnic = error.message;
+      for (const p of data ?? []) profileMap.set((p as any).user_id, p as any);
+    }
+    if (emailValid) {
+      const { data, error } = await supabase
+        .from("profiles").select("user_id, email, cnic").eq("email", emailValid);
+      if (error) errors.lookup_email = error.message;
+      for (const p of data ?? []) profileMap.set((p as any).user_id, p as any);
+    }
+    const profiles = Array.from(profileMap.values());
 
     const userIds = Array.from(new Set((profiles ?? []).map((p: any) => p.user_id).filter(Boolean)));
     const emails = Array.from(
