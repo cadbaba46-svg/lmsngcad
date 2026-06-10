@@ -429,6 +429,27 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_credentials: {
+        Row: {
+          created_at: string
+          generated_password: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          generated_password: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          generated_password?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -438,7 +459,6 @@ export type Database = {
           email: string | null
           father_name: string | null
           full_name: string | null
-          generated_password: string | null
           id: string
           must_change_password: boolean
           phone: string | null
@@ -455,7 +475,6 @@ export type Database = {
           email?: string | null
           father_name?: string | null
           full_name?: string | null
-          generated_password?: string | null
           id?: string
           must_change_password?: boolean
           phone?: string | null
@@ -472,7 +491,6 @@ export type Database = {
           email?: string | null
           father_name?: string | null
           full_name?: string | null
-          generated_password?: string | null
           id?: string
           must_change_password?: boolean
           phone?: string | null
