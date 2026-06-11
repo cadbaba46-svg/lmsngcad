@@ -55,16 +55,12 @@ const ChallansView = ({ title, icon, variant }: Props) => {
       if (cancelled) return;
       setCnic(userCnic);
 
-      if (userCnic) {
-        const { data } = await supabase
-          .from("challans" as any)
-          .select("id,challan_number,description,issue_date,due_date,amount,currency,status,paid_at")
-          .eq("customer_cnic", userCnic)
-          .order("issue_date", { ascending: false });
-        if (!cancelled) setChallans((data as any) ?? []);
-      } else {
-        setChallans([]);
-      }
+      const { data } = await supabase
+        .from("challans" as any)
+        .select("id,challan_number,description,issue_date,due_date,amount,currency,status,paid_at")
+        .eq("user_id", user.id)
+        .order("issue_date", { ascending: false });
+      if (!cancelled) setChallans((data as any) ?? []);
       if (!cancelled) setLoading(false);
     })();
     return () => {
