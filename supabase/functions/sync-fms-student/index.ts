@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
 
     const password = generatePassword();
     const regNumber = generateRegNumber();
+    let enrolledCourseId: string | null = null;
 
     // Create auth user
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -103,7 +104,6 @@ Deno.serve(async (req) => {
         .eq("user_id", data.user.id);
 
       // Auto-enroll in selected course (fee already paid via admissions portal)
-      let enrolledCourseId: string | null = null;
       if (course_id) {
         const { data: course } = await supabaseAdmin
           .from("courses")
@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
         user: { id: data.user.id, email: data.user.email },
         registration_number: regNumber,
         password,
-        enrolled_course_id: typeof enrolledCourseId !== "undefined" ? enrolledCourseId : null,
+        enrolled_course_id: enrolledCourseId,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
