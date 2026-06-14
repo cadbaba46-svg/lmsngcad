@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { name, father_name, email, phone, cnic, address, qualification } = await req.json();
+    const { name, father_name, email, phone, cnic, address, qualification, course_id } = await req.json();
 
     if (!name || !email || !cnic) {
       return new Response(JSON.stringify({ error: "name, email, and cnic are required" }), {
@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
 
     const password = generatePassword();
     const regNumber = generateRegNumber();
+    let enrolledCourseId: string | null = null;
 
     // Create auth user
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -102,6 +103,43 @@ Deno.serve(async (req) => {
         .update({ role: "student" })
         .eq("user_id", data.user.id);
 
+      // Auto-enroll in selected course (fee already paid via admissions portal)
+      if (course_id) {
+        const { data: course } = await supabaseAdmin
+          .from("courses")
+          .select("id, is_active")
+          .eq("id", course_id)
+          .maybeSingle();
+
+        if (course?.is_active) {
+          const { data: enrollment, error: enrollErr } = await supabaseAdmin
+            .from("enrollments")
+            .insert({
+              user_id: data.user.id,
+              course_id: course.id,
+              status: "active",
+              challan_paid: true,
+              challan_paid_at: new Date().toISOString(),
+            })
+            .select("id")
+            .single();
+
+          if (enrollErr) {
+            console.error("Failed to auto-enroll student", enrollErr);
+          } else {
+            enrolledCourseId = course.id;
+            // The create_course_fee_challan trigger generates an unpaid challan;
+            // mark it paid since fee was collected via the admissions portal.
+            await supabaseAdmin
+              .from("challans")
+              .update({ status: "paid", paid_at: new Date().toISOString() })
+              .eq("enrollment_id", enrollment.id);
+          }
+        } else {
+          console.warn("course_id provided but course not found or inactive:", course_id);
+        }
+      }
+
       // Send welcome email with credentials
       try {
         await supabaseAdmin.functions.invoke("send-transactional-email", {
@@ -123,6 +161,7 @@ Deno.serve(async (req) => {
         user: { id: data.user.id, email: data.user.email },
         registration_number: regNumber,
         password,
+        enrolled_course_id: enrolledCourseId,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
