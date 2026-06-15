@@ -10,6 +10,21 @@ async function sha256(input: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function sendTransactionalEmail(body: Record<string, unknown>) {
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const res = await fetch(`${url}/functions/v1/send-transactional-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${serviceKey}`,
+      "apikey": serviceKey,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`send-transactional-email failed: ${res.status} ${await res.text()}`);
+}
+
 function genOtp(): string {
   const n = new Uint32Array(1);
   crypto.getRandomValues(n);
@@ -84,14 +99,12 @@ Deno.serve(async (req) => {
       expires_at,
     });
 
-    // Send via transactional email
-    await admin.functions.invoke("send-transactional-email", {
-      body: {
-        templateName: "password-reset-otp",
-        recipientEmail: profile.email,
-        idempotencyKey: `pwd-reset-otp-${profile.user_id}-${Date.now()}`,
-        templateData: { name: profile.full_name, otp },
-      },
+    // Send via transactional email using the service token, otherwise the email function rejects the call.
+    await sendTransactionalEmail({
+      templateName: "password-reset-otp",
+      recipientEmail: profile.email,
+      idempotencyKey: `pwd-reset-otp-${profile.user_id}-${Date.now()}`,
+      templateData: { name: profile.full_name, otp },
     });
 
     return new Response(JSON.stringify({ success: true }), {

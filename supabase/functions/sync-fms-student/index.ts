@@ -19,6 +19,21 @@ function generateRegNumber(): string {
   return `NGCAD-${year}-${rand}`;
 }
 
+async function sendTransactionalEmail(body: Record<string, unknown>) {
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const res = await fetch(`${url}/functions/v1/send-transactional-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${serviceKey}`,
+      "apikey": serviceKey,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`send-transactional-email failed: ${res.status} ${await res.text()}`);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -142,13 +157,11 @@ Deno.serve(async (req) => {
 
       // Send welcome email with credentials
       try {
-        await supabaseAdmin.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "welcome-credentials",
-            recipientEmail: email,
-            idempotencyKey: `welcome-${data.user.id}`,
-            templateData: { name, email, password, rollNumber: regNumber },
-          },
+        await sendTransactionalEmail({
+          templateName: "welcome-credentials",
+          recipientEmail: email,
+          idempotencyKey: `welcome-${data.user.id}`,
+          templateData: { name, email, password, rollNumber: regNumber },
         });
       } catch (e) {
         console.error("Failed to send welcome email", e);
