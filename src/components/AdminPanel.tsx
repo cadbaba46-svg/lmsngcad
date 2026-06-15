@@ -274,7 +274,7 @@ const AdminPanel = () => {
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4 mt-4">
           <div className="flex justify-end">
-            <Button onClick={() => { setShowForm(!showForm); setGeneratedPassword(""); }} className="gap-2">
+            <Button onClick={() => setShowForm(!showForm)} className="gap-2">
               <UserPlus className="h-4 w-4" /> {showForm ? "Cancel" : "Create User"}
             </Button>
           </div>
@@ -324,19 +324,6 @@ const AdminPanel = () => {
                   </Button>
                 </div>
               </form>
-
-              {generatedPassword && (
-                <div className="bg-muted border border-border rounded-lg p-4 space-y-2">
-                  <p className="text-sm font-semibold text-foreground">User Created — Credentials:</p>
-                  <p className="text-sm text-muted-foreground">Email: <span className="font-mono text-foreground">{createdEmail}</span></p>
-                  {createdRollNumber && <p className="text-sm text-muted-foreground">Registration No: <span className="font-mono text-foreground">{createdRollNumber}</span></p>}
-                  <p className="text-sm text-muted-foreground">Password: <span className="font-mono text-foreground">{generatedPassword}</span></p>
-                  <Button variant="outline" size="sm" onClick={copyCredentials} className="gap-2">
-                    <Copy className="h-3 w-3" /> Copy Credentials
-                  </Button>
-                  <p className="text-xs text-destructive">⚠️ Save these credentials now. The password cannot be retrieved later.</p>
-                </div>
-              )}
             </div>
           )}
 
