@@ -357,6 +357,54 @@ export type Database = {
           },
         ]
       }
+      lms_totp_secrets: {
+        Row: {
+          created_at: string
+          id: string
+          secret: string
+          updated_at: string
+          user_id: string
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          secret: string
+          updated_at?: string
+          user_id: string
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          secret?: string
+          updated_at?: string
+          user_id?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
+      lms_totp_sessions: {
+        Row: {
+          expires_at: string
+          session_id: string
+          user_id: string
+          verified_at: string
+        }
+        Insert: {
+          expires_at?: string
+          session_id: string
+          user_id: string
+          verified_at?: string
+        }
+        Update: {
+          expires_at?: string
+          session_id?: string
+          user_id?: string
+          verified_at?: string
+        }
+        Relationships: []
+      }
       mandatory_lectures: {
         Row: {
           course_id: string | null
