@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Copy, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video } from "lucide-react";
+import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminSurveysPanel from "@/components/AdminSurveysPanel";
@@ -46,9 +46,6 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [generatedPassword, setGeneratedPassword] = useState("");
-  const [createdEmail, setCreatedEmail] = useState("");
-  const [createdRollNumber, setCreatedRollNumber] = useState("");
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [selectedUserEnrollment, setSelectedUserEnrollment] = useState<any>(null);
   const [selectedUserRole, setSelectedUserRole] = useState<string>("");
@@ -146,11 +143,7 @@ const AdminPanel = () => {
       if (res.error) {
         toast.error(res.error.message || "Failed to create user");
       } else {
-        const { password } = res.data;
-        setGeneratedPassword(password);
-        setCreatedEmail(email);
-        setCreatedRollNumber(rollNumber);
-        toast.success("User created successfully!");
+        toast.success("User created successfully. Credentials are available only in the vault.");
         setEmail(""); setFullName(""); setFatherName(""); setRollNumber(""); setPhone(""); setCnic(""); setUserRole("student");
         fetchUsers();
         fetchStudents();
@@ -200,12 +193,6 @@ const AdminPanel = () => {
     setSelectedUserRole((roles || []).map((r) => r.role as string).join(", ") || "user");
     // Fetch email from auth via edge function is not possible, use user metadata
     // We'll show email from the users list if available
-  };
-
-  const copyCredentials = () => {
-    const text = `Email: ${createdEmail}\nUsername/Roll No: ${createdRollNumber || "N/A"}\nPassword: ${generatedPassword}`;
-    navigator.clipboard.writeText(text);
-    toast.success("Credentials copied to clipboard!");
   };
 
   const handleEditCourse = (course: Course) => {
