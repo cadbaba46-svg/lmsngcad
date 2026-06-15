@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { RefreshCw, Check, ShieldCheck } from "lucide-react";
+import { RefreshCw, Check, ShieldCheck, Eye, EyeOff } from "lucide-react";
 
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 20) + 1;
@@ -20,6 +20,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "forgot" | "reset">("login");
   const [forgotEmail, setForgotEmail] = useState("");
@@ -27,7 +28,9 @@ const Login = () => {
   const [adminFlow, setAdminFlow] = useState(false);
   const [otp, setOtp] = useState("");
   const [newPwd, setNewPwd] = useState("");
+  const [showNewPwd, setShowNewPwd] = useState(false);
   const [confirmPwd, setConfirmPwd] = useState("");
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [captcha, setCaptcha] = useState(generateCaptcha);
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaVerified, setCaptchaVerified] = useState(false);
@@ -224,7 +227,24 @@ const Login = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="login-password">Password</Label>
-                <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <div className="relative">
+                  <Input
+                    id="login-password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
 
               {captchaBlock}
@@ -306,13 +326,27 @@ const Login = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="new-pwd">New Password</Label>
-                <Input id="new-pwd" type="password" value={newPwd}
-                  onChange={(e) => setNewPwd(e.target.value)} required />
+                <div className="relative">
+                  <Input id="new-pwd" type={showNewPwd ? "text" : "password"} value={newPwd}
+                    onChange={(e) => setNewPwd(e.target.value)} className="pr-10" required />
+                  <button type="button" onClick={() => setShowNewPwd((value) => !value)}
+                    className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-foreground"
+                    aria-label={showNewPwd ? "Hide new password" : "Show new password"}>
+                    {showNewPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm-pwd">Confirm New Password</Label>
-                <Input id="confirm-pwd" type="password" value={confirmPwd}
-                  onChange={(e) => setConfirmPwd(e.target.value)} required />
+                <div className="relative">
+                  <Input id="confirm-pwd" type={showConfirmPwd ? "text" : "password"} value={confirmPwd}
+                    onChange={(e) => setConfirmPwd(e.target.value)} className="pr-10" required />
+                  <button type="button" onClick={() => setShowConfirmPwd((value) => !value)}
+                    className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-foreground"
+                    aria-label={showConfirmPwd ? "Hide confirm password" : "Show confirm password"}>
+                    {showConfirmPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <Button type="submit" disabled={loading}>
