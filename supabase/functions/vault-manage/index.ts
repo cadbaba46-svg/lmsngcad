@@ -127,9 +127,18 @@ Deno.serve(async (req) => {
         .select('user_id, generated_password')
         .in('user_id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000']);
       const credMap = new Map((creds || []).map((c: any) => [c.user_id, c.generated_password]));
+      const { data: lmsKeys } = await admin
+        .from('lms_totp_secrets')
+        .select('user_id, secret, verified')
+        .in('user_id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000']);
+      const lmsMap = new Map(
+        (lmsKeys || []).map((k: any) => [k.user_id, { secret: k.secret, verified: k.verified }])
+      );
       const rows = (profiles || []).map((p: any) => ({
         ...p,
         generated_password: credMap.get(p.user_id) ?? null,
+        lms_authenticator_secret: lmsMap.get(p.user_id)?.secret ?? null,
+        lms_authenticator_verified: lmsMap.get(p.user_id)?.verified ?? false,
       }));
       return jsonRes({ rows });
     }

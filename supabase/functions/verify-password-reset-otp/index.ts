@@ -107,6 +107,11 @@ Deno.serve(async (req) => {
       .update({ must_change_password: false })
       .eq("user_id", row.user_id);
 
+    // Keep vault credentials in sync with the new password
+    await admin
+      .from("profile_credentials")
+      .upsert({ user_id: row.user_id, generated_password: newPassword }, { onConflict: "user_id" });
+
     // Fetch name for confirmation email
     const { data: profile } = await admin
       .from("profiles").select("full_name, email").eq("user_id", row.user_id).maybeSingle();

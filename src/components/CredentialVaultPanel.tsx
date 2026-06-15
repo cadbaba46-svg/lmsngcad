@@ -16,6 +16,8 @@ interface UserRow {
   email: string | null;
   roll_number: string | null;
   generated_password: string | null;
+  lms_authenticator_secret: string | null;
+  lms_authenticator_verified: boolean;
 }
 
 const CredentialVaultPanel = () => {
@@ -213,6 +215,7 @@ const CredentialVaultPanel = () => {
               <th className="p-3 font-semibold">Email</th>
               <th className="p-3 font-semibold">Roll #</th>
               <th className="p-3 font-semibold">Password</th>
+              <th className="p-3 font-semibold">LMS Authenticator</th>
               <th className="p-3"></th>
             </tr>
           </thead>
@@ -220,6 +223,8 @@ const CredentialVaultPanel = () => {
             {filtered.map((r) => {
               const shown = revealed[r.user_id];
               const pw = r.generated_password || "—";
+              const auth = r.lms_authenticator_secret;
+              const authShown = revealed[`a:${r.user_id}`];
               return (
                 <tr key={r.user_id} className="border-t border-border">
                   <td className="p-3">{r.full_name || "—"}</td>
@@ -228,14 +233,38 @@ const CredentialVaultPanel = () => {
                   <td className="p-3 font-mono">
                     {pw === "—" ? "—" : shown ? pw : "••••••••"}
                   </td>
+                  <td className="p-3 font-mono text-xs">
+                    {!auth ? (
+                      <span className="text-muted-foreground">Not set</span>
+                    ) : authShown ? (
+                      <span className="break-all">{auth}</span>
+                    ) : (
+                      <span>
+                        ••••••••{" "}
+                        {!r.lms_authenticator_verified && (
+                          <span className="ml-1 text-amber-600">(pending)</span>
+                        )}
+                      </span>
+                    )}
+                  </td>
                   <td className="p-3 text-right space-x-2 whitespace-nowrap">
                     {pw !== "—" && (
                       <>
                         <Button variant="ghost" size="sm" onClick={() => setRevealed((p) => ({ ...p, [r.user_id]: !shown }))}>
-                          {shown ? "Hide" : "Show"}
+                          {shown ? "Hide PW" : "Show PW"}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => copy(pw)} className="gap-1">
                           <Copy className="h-3 w-3" /> Copy
+                        </Button>
+                      </>
+                    )}
+                    {auth && (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={() => setRevealed((p) => ({ ...p, [`a:${r.user_id}`]: !authShown }))}>
+                          {authShown ? "Hide Key" : "Show Key"}
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => copy(auth)} className="gap-1">
+                          <Copy className="h-3 w-3" /> Key
                         </Button>
                       </>
                     )}
@@ -244,7 +273,7 @@ const CredentialVaultPanel = () => {
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No users found.</td></tr>
+              <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No users found.</td></tr>
             )}
           </tbody>
         </table>
