@@ -49,22 +49,15 @@ const ResetPassword = () => {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) {
-      toast.error(error.message);
+    // Use edge function so the password also syncs to profile_credentials (vault).
+    const { data, error } = await supabase.functions.invoke("update-own-password", {
+      body: { newPassword },
+    });
+    if (error || (data && (data as any).error)) {
+      toast.error(((data as any)?.error) || error?.message || "Failed to update password");
       setLoading(false);
       return;
     }
-
-    // Clear the must_change_password flag
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase
-        .from("profiles")
-        .update({ must_change_password: false })
-        .eq("user_id", user.id);
-    }
-
     setLoading(false);
     toast.success("Password updated successfully!");
     navigate("/dashboard");

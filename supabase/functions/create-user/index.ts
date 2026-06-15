@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ user: { id: data.user.id, email: data.user.email }, password }),
+      JSON.stringify({ user: { id: data.user.id, email: data.user.email } }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

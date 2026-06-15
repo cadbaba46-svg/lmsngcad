@@ -18,6 +18,7 @@ import SurveysForSubjectsPanel from "@/components/SurveysForSubjectsPanel";
 import ReportsPanel from "@/components/ReportsPanel";
 import ComplaintsPanel from "@/components/ComplaintsPanel";
 import MandatoryLectureGate from "@/components/MandatoryLectureGate";
+import LMSAuthenticatorGate from "@/components/LMSAuthenticatorGate";
 import ngcadLogo from "@/assets/ngcad-logo.png";
 import { LogOut } from "lucide-react";
 import { Helmet } from "react-helmet-async";
@@ -163,6 +164,7 @@ const Dashboard = () => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
+    <LMSAuthenticatorGate>
     <div className="min-h-screen flex flex-col bg-background">
       <Helmet>
         <title>Dashboard — LMS NGCAD</title>
@@ -204,6 +206,7 @@ const Dashboard = () => {
         />
       )}
     </div>
+    </LMSAuthenticatorGate>
   );
 };
 
