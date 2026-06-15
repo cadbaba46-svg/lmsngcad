@@ -55,11 +55,26 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'setup_init' || action === 'reset') {
-      const secret = new OTPAuth.Secret({ size: 20 }).base32;
-      await admin.from('admin_totp_secrets').upsert(
-        { user_id: userId, secret, verified: false },
-        { onConflict: 'user_id' }
-      );
+      // On 'setup_init', reuse an existing unverified secret so the QR stays stable
+      // across page reloads. 'reset' always issues a new secret.
+      let secret: string | null = null;
+      if (action === 'setup_init') {
+        const { data: existing } = await admin
+          .from('admin_totp_secrets')
+          .select('secret, verified')
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (existing && !existing.verified) {
+          secret = existing.secret as string;
+        }
+      }
+      if (!secret) {
+        secret = new OTPAuth.Secret({ size: 20 }).base32;
+        await admin.from('admin_totp_secrets').upsert(
+          { user_id: userId, secret, verified: false },
+          { onConflict: 'user_id' }
+        );
+      }
       const totp = new OTPAuth.TOTP({ issuer: ISSUER, label: userEmail, secret });
       return jsonRes({ secret, otpauth_url: totp.toString() });
     }
