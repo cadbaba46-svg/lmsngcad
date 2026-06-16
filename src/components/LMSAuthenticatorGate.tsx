@@ -10,17 +10,30 @@ import QRCode from "qrcode";
 
 type Stage = "loading" | "setup" | "verify" | "ok";
 
-const sessionKey = (uid: string) => `lms_totp_ok_${uid}`;
+const SESSION_PREFIX = "lms_totp_ok_";
+const sessionKey = (uid: string, loginAt?: string | null) => `${SESSION_PREFIX}${uid}_${loginAt || "current"}`;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12h, matches backend
 
-const hasLocalSession = (uid: string) => {
+const clearOldLocalSessions = (uid: string, keepKey?: string) => {
   try {
-    const raw = localStorage.getItem(sessionKey(uid));
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith(`${SESSION_PREFIX}${uid}_`) && key !== keepKey) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch {}
+};
+
+const hasLocalSession = (uid: string, loginAt?: string | null) => {
+  try {
+    const key = sessionKey(uid, loginAt);
+    clearOldLocalSessions(uid, key);
+    const raw = localStorage.getItem(key);
     if (!raw) return false;
     const ts = parseInt(raw, 10);
     if (!Number.isFinite(ts)) return false;
     if (Date.now() - ts > SESSION_TTL_MS) {
-      localStorage.removeItem(sessionKey(uid));
+      localStorage.removeItem(key);
       return false;
     }
     return true;
@@ -32,7 +45,7 @@ const hasLocalSession = (uid: string) => {
 const LMSAuthenticatorGate = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [stage, setStage] = useState<Stage>(() =>
-    user && hasLocalSession(user.id) ? "ok" : "loading"
+    user && hasLocalSession(user.id, user.last_sign_in_at) ? "ok" : "loading"
   );
   const [secret, setSecret] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
@@ -55,8 +68,8 @@ const LMSAuthenticatorGate = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (!user) return;
-    // Already verified in this browser within TTL — don't re-prompt on tab switches / remounts.
-    if (hasLocalSession(user.id)) {
+    // Already verified for this exact login — don't re-prompt on tab switches / remounts.
+    if (hasLocalSession(user.id, user.last_sign_in_at)) {
       setStage("ok");
       return;
     }
@@ -65,11 +78,8 @@ const LMSAuthenticatorGate = ({ children }: { children: React.ReactNode }) => {
         const status = await call({ action: "status" });
         if (!status.has_secret || !status.verified) {
           await beginSetup();
-        } else if (!status.session_valid) {
-          setStage("verify");
         } else {
-          try { localStorage.setItem(sessionKey(user.id), String(Date.now())); } catch {}
-          setStage("ok");
+          setStage("verify");
         }
       } catch (e: any) {
         toast.error(e.message || "Authenticator check failed");
@@ -86,7 +96,9 @@ const LMSAuthenticatorGate = ({ children }: { children: React.ReactNode }) => {
       setSecret("");
       setQrDataUrl("");
       if (user) {
-        try { localStorage.setItem(sessionKey(user.id), String(Date.now())); } catch {}
+        const key = sessionKey(user.id, user.last_sign_in_at);
+        clearOldLocalSessions(user.id, key);
+        try { localStorage.setItem(key, String(Date.now())); } catch {}
       }
       setStage("ok");
       toast.success("Authenticator verified.");
