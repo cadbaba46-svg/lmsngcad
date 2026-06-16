@@ -108,9 +108,18 @@ Deno.serve(async (req) => {
       .eq("user_id", row.user_id);
 
     // Keep vault credentials in sync with the new password
-    await admin
+    const { error: credErr } = await admin
       .from("profile_credentials")
-      .upsert({ user_id: row.user_id, generated_password: newPassword }, { onConflict: "user_id" });
+      .upsert(
+        { user_id: row.user_id, generated_password: newPassword, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      );
+    if (credErr) {
+      console.error("profile_credentials sync failed", credErr);
+      return new Response(JSON.stringify({ error: "Password changed, but vault sync failed. Contact admin." }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Fetch name for confirmation email
     const { data: profile } = await admin
