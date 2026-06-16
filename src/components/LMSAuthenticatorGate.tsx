@@ -10,9 +10,30 @@ import QRCode from "qrcode";
 
 type Stage = "loading" | "setup" | "verify" | "ok";
 
+const sessionKey = (uid: string) => `lms_totp_ok_${uid}`;
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12h, matches backend
+
+const hasLocalSession = (uid: string) => {
+  try {
+    const raw = localStorage.getItem(sessionKey(uid));
+    if (!raw) return false;
+    const ts = parseInt(raw, 10);
+    if (!Number.isFinite(ts)) return false;
+    if (Date.now() - ts > SESSION_TTL_MS) {
+      localStorage.removeItem(sessionKey(uid));
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const LMSAuthenticatorGate = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
-  const [stage, setStage] = useState<Stage>("loading");
+  const [stage, setStage] = useState<Stage>(() =>
+    user && hasLocalSession(user.id) ? "ok" : "loading"
+  );
   const [secret, setSecret] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [otp, setOtp] = useState("");
@@ -34,6 +55,11 @@ const LMSAuthenticatorGate = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (!user) return;
+    // Already verified in this browser within TTL — don't re-prompt on tab switches / remounts.
+    if (hasLocalSession(user.id)) {
+      setStage("ok");
+      return;
+    }
     (async () => {
       try {
         const status = await call({ action: "status" });
@@ -42,6 +68,7 @@ const LMSAuthenticatorGate = ({ children }: { children: React.ReactNode }) => {
         } else if (!status.session_valid) {
           setStage("verify");
         } else {
+          try { localStorage.setItem(sessionKey(user.id), String(Date.now())); } catch {}
           setStage("ok");
         }
       } catch (e: any) {
@@ -49,7 +76,7 @@ const LMSAuthenticatorGate = ({ children }: { children: React.ReactNode }) => {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user?.id]);
 
   const verify = async (action: "setup_verify" | "verify_session") => {
     setBusy(true);
@@ -58,6 +85,9 @@ const LMSAuthenticatorGate = ({ children }: { children: React.ReactNode }) => {
       setOtp("");
       setSecret("");
       setQrDataUrl("");
+      if (user) {
+        try { localStorage.setItem(sessionKey(user.id), String(Date.now())); } catch {}
+      }
       setStage("ok");
       toast.success("Authenticator verified.");
     } catch (e: any) {
