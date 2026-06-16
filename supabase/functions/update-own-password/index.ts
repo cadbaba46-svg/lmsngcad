@@ -16,15 +16,14 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith('Bearer ')) return jsonRes({ error: 'Unauthorized' }, 401);
 
     const token = authHeader.replace('Bearer ', '');
-    const authClient = createClient(
+    const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
-    const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(token);
-    if (claimsErr || !claimsData?.claims) return jsonRes({ error: 'Unauthorized' }, 401);
-    const userId = claimsData.claims.sub as string;
-    const email = (claimsData.claims.email as string) || '';
+    const { data: userData, error: userErr } = await admin.auth.getUser(token);
+    if (userErr || !userData?.user) return jsonRes({ error: 'Unauthorized' }, 401);
+    const userId = userData.user.id;
+    const email = userData.user.email || '';
 
     const { currentPassword, newPassword } = await req.json();
     if (!newPassword || String(newPassword).length < 6) {
@@ -45,17 +44,19 @@ Deno.serve(async (req) => {
       if (pwErr) return jsonRes({ error: 'Current password is incorrect' }, 401);
     }
 
-    const admin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
-
     const { error: updErr } = await admin.auth.admin.updateUserById(userId, { password: newPassword });
     if (updErr) return jsonRes({ error: updErr.message }, 400);
 
-    await admin
+    const { error: credErr } = await admin
       .from('profile_credentials')
-      .upsert({ user_id: userId, generated_password: newPassword }, { onConflict: 'user_id' });
+      .upsert(
+        { user_id: userId, generated_password: newPassword, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      );
+    if (credErr) {
+      console.error('profile_credentials sync failed', credErr);
+      return jsonRes({ error: 'Password changed, but vault sync failed. Contact admin.' }, 500);
+    }
 
     await admin
       .from('profiles')
