@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video } from "lucide-react";
+import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video, Webhook } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminSurveysPanel from "@/components/AdminSurveysPanel";
 import CredentialVaultPanel from "@/components/CredentialVaultPanel";
 import AdminComplaintsPanel from "@/components/AdminComplaintsPanel";
 import AdminLecturesPanel from "@/components/AdminLecturesPanel";
+import WebhookTestPanel from "@/components/WebhookTestPanel";
 
 interface Profile {
   id: string;
@@ -269,6 +270,7 @@ const AdminPanel = () => {
           <TabsTrigger value="complaints" className="gap-2"><MessageSquare className="h-4 w-4" /> Complaints</TabsTrigger>
           <TabsTrigger value="lectures" className="gap-2"><Video className="h-4 w-4" /> Lectures</TabsTrigger>
           <TabsTrigger value="vault" className="gap-2"><KeyRound className="h-4 w-4" /> Vault</TabsTrigger>
+          <TabsTrigger value="webhook" className="gap-2"><Webhook className="h-4 w-4" /> Webhook</TabsTrigger>
         </TabsList>
 
         {/* Users Tab */}
@@ -637,6 +639,9 @@ const AdminPanel = () => {
         </TabsContent>
         <TabsContent value="vault" className="mt-4">
           <CredentialVaultPanel />
+        </TabsContent>
+        <TabsContent value="webhook" className="mt-4">
+          <WebhookTestPanel />
         </TabsContent>
       </Tabs>
     </div>
