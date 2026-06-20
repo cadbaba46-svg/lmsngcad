@@ -53,19 +53,21 @@ Deno.serve(async (req) => {
 
     const payload = await req.json();
 
-    // Expected payload from Admissions Portal
-    const {
-      email,
-      full_name,
-      father_name,
-      phone,
-      cnic,
-      address,
-      qualification,
-      course_id,
-      course_name,
-      application_number,
-    } = payload;
+    // Expected payload from Admissions Portal (flat fields + nested personal/academic)
+    const personal = (payload.personal ?? {}) as Record<string, any>;
+    const email = payload.email ?? personal.email;
+    const full_name = payload.full_name ?? personal.full_name;
+    const father_name = payload.father_name ?? personal.father_name ?? null;
+    const phone = payload.phone ?? personal.phone ?? null;
+    const cnic = payload.cnic ?? personal.cnic ?? null;
+    const address = payload.address ?? personal.address ?? null;
+    const city = personal.city ?? null;
+    const province = personal.province ?? null;
+    const gender = personal.gender ?? null;
+    const dob = personal.dob ?? null;
+    const qualification = payload.qualification ?? null;
+    const course_id = payload.course_id ?? null;
+    const application_number = payload.application_number ?? null;
 
     if (!email || !cnic || !full_name) {
       return new Response(JSON.stringify({ error: "email, cnic, and full_name are required" }), {
@@ -115,6 +117,10 @@ Deno.serve(async (req) => {
           cnic,
           address: address || null,
           qualification: qualification || null,
+          city,
+          province,
+          gender,
+          dob,
           roll_number: regNumber,
           must_change_password: true,
         })
@@ -128,10 +134,11 @@ Deno.serve(async (req) => {
           { onConflict: "user_id" }
         );
 
-      // Set role to student
+      // Set role to student (replace any default role assigned by handle_new_user trigger)
+      await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user.id);
       await supabaseAdmin
         .from("user_roles")
-        .upsert({ user_id: data.user.id, role: "student" }, { onConflict: "user_id" });
+        .insert({ user_id: data.user.id, role: "student" });
 
       // Auto-enroll in selected course
       if (course_id) {
