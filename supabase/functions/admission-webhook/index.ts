@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
 
     if (data.user) {
       // Update profile with admission data
-      await supabaseAdmin
+      const { error: profileErr } = await supabaseAdmin
         .from("profiles")
         .update({
           full_name,
@@ -115,8 +115,6 @@ Deno.serve(async (req) => {
           father_name: father_name || null,
           phone: phone || null,
           cnic,
-          address: address || null,
-          qualification: qualification || null,
           city,
           province,
           gender,
@@ -125,6 +123,7 @@ Deno.serve(async (req) => {
           must_change_password: true,
         })
         .eq("user_id", data.user.id);
+      if (profileErr) console.error("profile update failed", profileErr);
 
       // Store generated password in vault
       await supabaseAdmin
