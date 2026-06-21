@@ -68,6 +68,8 @@ Deno.serve(async (req) => {
     const qualification = payload.qualification ?? null;
     const course_id = payload.course_id ?? null;
     const application_number = payload.application_number ?? null;
+    const photo_url = payload.photo_url ?? personal.photo_url ?? null;
+    const documents = payload.documents ?? {};
 
     if (!email || !cnic || !full_name) {
       return new Response(JSON.stringify({ error: "email, cnic, and full_name are required" }), {
@@ -119,6 +121,9 @@ Deno.serve(async (req) => {
           province,
           gender,
           dob,
+          qualification: qualification || null,
+          photo_url: photo_url || null,
+          documents: documents || {},
           roll_number: regNumber,
           must_change_password: true,
         })
