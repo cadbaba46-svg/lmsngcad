@@ -509,6 +509,7 @@ export type Database = {
           created_at: string
           department: string | null
           dob: string | null
+          documents: Json
           email: string | null
           father_name: string | null
           full_name: string | null
@@ -516,7 +517,9 @@ export type Database = {
           id: string
           must_change_password: boolean
           phone: string | null
+          photo_url: string | null
           province: string | null
+          qualification: string | null
           roll_number: string | null
           semester: string | null
           updated_at: string
@@ -529,6 +532,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           dob?: string | null
+          documents?: Json
           email?: string | null
           father_name?: string | null
           full_name?: string | null
@@ -536,7 +540,9 @@ export type Database = {
           id?: string
           must_change_password?: boolean
           phone?: string | null
+          photo_url?: string | null
           province?: string | null
+          qualification?: string | null
           roll_number?: string | null
           semester?: string | null
           updated_at?: string
@@ -549,6 +555,7 @@ export type Database = {
           created_at?: string
           department?: string | null
           dob?: string | null
+          documents?: Json
           email?: string | null
           father_name?: string | null
           full_name?: string | null
@@ -556,7 +563,9 @@ export type Database = {
           id?: string
           must_change_password?: boolean
           phone?: string | null
+          photo_url?: string | null
           province?: string | null
+          qualification?: string | null
           roll_number?: string | null
           semester?: string | null
           updated_at?: string

@@ -25,6 +25,13 @@ interface Profile {
   phone: string | null;
   cnic: string | null;
   created_at: string;
+  gender?: string | null;
+  city?: string | null;
+  province?: string | null;
+  dob?: string | null;
+  qualification?: string | null;
+  photo_url?: string | null;
+  documents?: Record<string, string> | null;
 }
 
 interface Course {
@@ -51,6 +58,8 @@ const AdminPanel = () => {
   const [selectedUserEnrollment, setSelectedUserEnrollment] = useState<any>(null);
   const [selectedUserRole, setSelectedUserRole] = useState<string>("");
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [editProfile, setEditProfile] = useState<any | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   // User form
   const [email, setEmail] = useState("");
@@ -77,7 +86,7 @@ const AdminPanel = () => {
   const [assignTeacherId, setAssignTeacherId] = useState("");
   const [assignCourseId, setAssignCourseId] = useState("");
 
-  const PROFILE_COLUMNS = "id,user_id,full_name,email,department,semester,roll_number,father_name,phone,cnic,created_at";
+  const PROFILE_COLUMNS = "id,user_id,full_name,email,department,semester,roll_number,father_name,phone,cnic,created_at,gender,city,province,dob,qualification,photo_url,documents";
   const fetchUsers = async () => {
     const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).order("created_at", { ascending: false });
     setUsers((data || []) as unknown as Profile[]);
@@ -182,6 +191,7 @@ const AdminPanel = () => {
 
   const handleSelectUser = async (user: Profile) => {
     setSelectedUser(user);
+    setEditProfile(null);
     // Fetch enrollment for this user
     const { data: enrollment } = await supabase
       .from("enrollments")
@@ -194,6 +204,65 @@ const AdminPanel = () => {
     setSelectedUserRole((roles || []).map((r) => r.role as string).join(", ") || "user");
     // Fetch email from auth via edge function is not possible, use user metadata
     // We'll show email from the users list if available
+  };
+
+  const openEditProfile = () => {
+    if (!selectedUser) return;
+    setEditProfile({
+      full_name: selectedUser.full_name || "",
+      father_name: (selectedUser as any).father_name || "",
+      phone: selectedUser.phone || "",
+      cnic: selectedUser.cnic || "",
+      roll_number: selectedUser.roll_number || "",
+      gender: (selectedUser as any).gender || "",
+      dob: (selectedUser as any).dob || "",
+      city: (selectedUser as any).city || "",
+      province: (selectedUser as any).province || "",
+      qualification: (selectedUser as any).qualification || "",
+      photo_url: (selectedUser as any).photo_url || "",
+      documents_json: JSON.stringify((selectedUser as any).documents || {}, null, 2),
+    });
+  };
+
+  const handleSaveProfile = async () => {
+    if (!selectedUser || !editProfile) return;
+    setSavingProfile(true);
+    let documents: Record<string, string> = {};
+    try {
+      documents = editProfile.documents_json ? JSON.parse(editProfile.documents_json) : {};
+    } catch {
+      toast.error("Documents JSON is invalid");
+      setSavingProfile(false);
+      return;
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        full_name: editProfile.full_name || null,
+        father_name: editProfile.father_name || null,
+        phone: editProfile.phone || null,
+        cnic: editProfile.cnic || null,
+        roll_number: editProfile.roll_number || null,
+        gender: editProfile.gender || null,
+        dob: editProfile.dob || null,
+        city: editProfile.city || null,
+        province: editProfile.province || null,
+        qualification: editProfile.qualification || null,
+        photo_url: editProfile.photo_url || null,
+        documents,
+      })
+      .eq("user_id", selectedUser.user_id);
+    setSavingProfile(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Profile updated");
+      setEditProfile(null);
+      await fetchUsers();
+      await fetchStudents();
+      const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("user_id", selectedUser.user_id).maybeSingle();
+      if (data) setSelectedUser(data as any);
+    }
   };
 
   const handleEditCourse = (course: Course) => {
@@ -351,6 +420,53 @@ const AdminPanel = () => {
                 <div><span className="text-muted-foreground">Payment:</span> <span className={`font-medium ${selectedUserEnrollment?.challan_paid ? "text-green-600" : "text-destructive"}`}>{selectedUserEnrollment ? (selectedUserEnrollment.challan_paid ? "Paid" : "Unpaid") : "N/A"}</span></div>
                 <div><span className="text-muted-foreground">Created:</span> <span className="font-medium text-foreground">{new Date(selectedUser.created_at).toLocaleDateString()}</span></div>
               </div>
+              <div className="pt-2">
+                <Button size="sm" onClick={openEditProfile} className="gap-1">
+                  <Settings className="h-3 w-3" /> Edit profile
+                </Button>
+              </div>
+              {editProfile && (
+                <div className="mt-4 border-t border-border pt-4 space-y-3">
+                  <h4 className="font-semibold text-foreground">Edit Profile</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1"><Label className="text-xs">Full Name</Label><Input value={editProfile.full_name} onChange={(e) => setEditProfile({ ...editProfile, full_name: e.target.value })} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Father Name</Label><Input value={editProfile.father_name} onChange={(e) => setEditProfile({ ...editProfile, father_name: e.target.value })} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Phone</Label><Input value={editProfile.phone} onChange={(e) => setEditProfile({ ...editProfile, phone: e.target.value })} /></div>
+                    <div className="space-y-1"><Label className="text-xs">CNIC</Label><Input value={editProfile.cnic} onChange={(e) => setEditProfile({ ...editProfile, cnic: e.target.value })} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Registration No.</Label><Input value={editProfile.roll_number} onChange={(e) => setEditProfile({ ...editProfile, roll_number: e.target.value })} /></div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Gender</Label>
+                      <Select value={editProfile.gender || ""} onValueChange={(v) => setEditProfile({ ...editProfile, gender: v })}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1"><Label className="text-xs">Date of Birth</Label><Input type="date" value={editProfile.dob || ""} onChange={(e) => setEditProfile({ ...editProfile, dob: e.target.value })} /></div>
+                    <div className="space-y-1"><Label className="text-xs">City</Label><Input value={editProfile.city} onChange={(e) => setEditProfile({ ...editProfile, city: e.target.value })} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Province</Label><Input value={editProfile.province} onChange={(e) => setEditProfile({ ...editProfile, province: e.target.value })} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Qualification</Label><Input value={editProfile.qualification} onChange={(e) => setEditProfile({ ...editProfile, qualification: e.target.value })} /></div>
+                    <div className="space-y-1 md:col-span-2"><Label className="text-xs">Photo URL</Label><Input value={editProfile.photo_url} onChange={(e) => setEditProfile({ ...editProfile, photo_url: e.target.value })} placeholder="https://…" /></div>
+                    <div className="space-y-1 md:col-span-2">
+                      <Label className="text-xs">Documents (JSON map of label → URL)</Label>
+                      <textarea
+                        className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground min-h-[120px] font-mono"
+                        value={editProfile.documents_json}
+                        onChange={(e) => setEditProfile({ ...editProfile, documents_json: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button size="sm" onClick={handleSaveProfile} disabled={savingProfile}>
+                      {savingProfile ? "Saving…" : "Save Changes"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditProfile(null)}>Cancel</Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
