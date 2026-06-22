@@ -242,6 +242,8 @@ const AdminPanel = () => {
       city: (selectedUser as any).city || "",
       province: (selectedUser as any).province || "",
       qualification: (selectedUser as any).qualification || "",
+      qualification_type: (selectedUser as any).qualification_type || "",
+      qualification_field: (selectedUser as any).qualification_field || "",
       photo_url: (selectedUser as any).photo_url || "",
       documents_json: JSON.stringify((selectedUser as any).documents || {}, null, 2),
     });
@@ -271,9 +273,11 @@ const AdminPanel = () => {
         city: editProfile.city || null,
         province: editProfile.province || null,
         qualification: editProfile.qualification || null,
+        qualification_type: editProfile.qualification_type || null,
+        qualification_field: editProfile.qualification_field || null,
         photo_url: editProfile.photo_url || null,
         documents,
-      })
+      } as any)
       .eq("user_id", selectedUser.user_id);
     setSavingProfile(false);
     if (error) {
@@ -480,7 +484,9 @@ const AdminPanel = () => {
                     <div className="space-y-1"><Label className="text-xs">Date of Birth</Label><Input type="date" value={editProfile.dob || ""} onChange={(e) => setEditProfile({ ...editProfile, dob: e.target.value })} /></div>
                     <div className="space-y-1"><Label className="text-xs">City</Label><Input value={editProfile.city} onChange={(e) => setEditProfile({ ...editProfile, city: e.target.value })} /></div>
                     <div className="space-y-1"><Label className="text-xs">Province</Label><Input value={editProfile.province} onChange={(e) => setEditProfile({ ...editProfile, province: e.target.value })} /></div>
-                    <div className="space-y-1"><Label className="text-xs">Qualification</Label><Input value={editProfile.qualification} onChange={(e) => setEditProfile({ ...editProfile, qualification: e.target.value })} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Qualification Type</Label><Input value={editProfile.qualification_type} onChange={(e) => setEditProfile({ ...editProfile, qualification_type: e.target.value })} placeholder="Matric / O-Levels / DAE / FSc" /></div>
+                    <div className="space-y-1"><Label className="text-xs">Qualification Field</Label><Input value={editProfile.qualification_field} onChange={(e) => setEditProfile({ ...editProfile, qualification_field: e.target.value })} placeholder="e.g. Mechanical, Pre-Medical, Science" /></div>
+                    <div className="space-y-1 md:col-span-2"><Label className="text-xs">Qualification (legacy)</Label><Input value={editProfile.qualification} onChange={(e) => setEditProfile({ ...editProfile, qualification: e.target.value })} /></div>
                     <div className="space-y-1 md:col-span-2"><Label className="text-xs">Photo URL</Label><Input value={editProfile.photo_url} onChange={(e) => setEditProfile({ ...editProfile, photo_url: e.target.value })} placeholder="https://…" /></div>
                     <div className="space-y-1 md:col-span-2">
                       <Label className="text-xs">Documents (JSON map of label → URL)</Label>
