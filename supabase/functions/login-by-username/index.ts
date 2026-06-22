@@ -27,23 +27,20 @@ Deno.serve(async (req) => {
 
     let email = identifier;
 
-    // Check if identifier is not an email (i.e., it's a roll number/username)
+    // Check if identifier is not an email (i.e., it's a registration number)
     if (!identifier.includes("@")) {
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from("profiles")
-        .select("user_id")
-        .eq("roll_number", identifier)
-        .single();
+      // Case-insensitive, dash/space-insensitive lookup
+      const { data: userId, error: lookupErr } = await supabaseAdmin
+        .rpc("find_user_id_by_login", { _identifier: identifier });
 
-      if (profileError || !profile) {
+      if (lookupErr || !userId) {
         return new Response(JSON.stringify({ error: "Invalid username or password" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Get user email from auth
-      const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(profile.user_id);
+      const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId as string);
       if (userError || !user) {
         return new Response(JSON.stringify({ error: "Invalid username or password" }), {
           status: 401,
