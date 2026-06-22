@@ -525,10 +525,10 @@ const AdminPanel = () => {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Loading...</td></tr>
-                  ) : users.length === 0 ? (
+                  ) : users.filter(matchesQuery).length === 0 ? (
                     <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No users found.</td></tr>
                   ) : (
-                    users.map((u) => (
+                    users.filter(matchesQuery).map((u) => (
                       <tr
                         key={u.id}
                         className="border-t border-border hover:bg-muted/50 cursor-pointer"
@@ -562,7 +562,20 @@ const AdminPanel = () => {
 
         {/* Students Tab */}
         <TabsContent value="students" className="space-y-4 mt-4">
-          <h3 className="text-lg font-semibold text-foreground">All Students</h3>
+          <div className="flex flex-wrap gap-2 items-center justify-between">
+            <h3 className="text-lg font-semibold text-foreground">All Students</h3>
+            <div className="flex gap-2 items-center">
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, reg no, CNIC, phone…"
+                className="max-w-sm"
+              />
+              <Button onClick={() => openCreateWithRole("student")} className="gap-2">
+                <UserPlus className="h-4 w-4" /> Create Student
+              </Button>
+            </div>
+          </div>
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -579,10 +592,10 @@ const AdminPanel = () => {
                   </tr>
                 </thead>
                 <tbody>
-                   {students.length === 0 ? (
+                   {students.filter(matchesQuery).length === 0 ? (
                      <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No students found.</td></tr>
                   ) : (
-                    students.map((s) => (
+                    students.filter(matchesQuery).map((s) => (
                       <tr key={s.id} className="border-t border-border hover:bg-muted/50">
                         <td className="p-3 text-foreground font-medium">{s.full_name || "—"}</td>
                         <td className="p-3 text-muted-foreground font-mono text-xs">{s.email || "—"}</td>
@@ -613,7 +626,20 @@ const AdminPanel = () => {
 
         {/* Teachers Tab */}
         <TabsContent value="teachers" className="space-y-4 mt-4">
-          <h3 className="text-lg font-semibold text-foreground">Teacher Management</h3>
+          <div className="flex flex-wrap gap-2 items-center justify-between">
+            <h3 className="text-lg font-semibold text-foreground">Teacher Management</h3>
+            <div className="flex gap-2 items-center">
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search teachers…"
+                className="max-w-sm"
+              />
+              <Button onClick={() => openCreateWithRole("teacher")} className="gap-2">
+                <UserPlus className="h-4 w-4" /> Create Teacher
+              </Button>
+            </div>
+          </div>
 
           {/* Assign teacher to course */}
           <div className="bg-card border border-border rounded-lg p-4 space-y-3">
@@ -689,10 +715,10 @@ const AdminPanel = () => {
                 </tr>
               </thead>
               <tbody>
-                {teachers.length === 0 ? (
+                {teachers.filter(matchesQuery).length === 0 ? (
                   <tr><td colSpan={3} className="p-6 text-center text-muted-foreground">No teachers found. Create a user with Teacher role first.</td></tr>
                 ) : (
-                  teachers.map((t: any) => (
+                  teachers.filter(matchesQuery).map((t: any) => (
                     <tr key={t.id} className="border-t border-border hover:bg-muted/50">
                       <td className="p-3 text-foreground">{t.full_name || "—"}</td>
                       <td className="p-3 text-muted-foreground">{t.department || "—"}</td>
@@ -724,6 +750,10 @@ const AdminPanel = () => {
                 <div className="space-y-2">
                   <Label>Price (Rs.)</Label>
                   <Input type="number" value={newCoursePrice} onChange={(e) => setNewCoursePrice(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Short Code (for roll number, e.g. ACAD, MS, SW, PTC, PS)</Label>
+                  <Input value={newCourseShortCode} onChange={(e) => setNewCourseShortCode(e.target.value)} placeholder="ACAD" />
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label>Description</Label>
@@ -757,6 +787,10 @@ const AdminPanel = () => {
                   <Input type="number" value={coursePrice} onChange={(e) => setCoursePrice(e.target.value)} />
                 </div>
                 <div className="space-y-2 md:col-span-2">
+                  <Label>Short Code (for roll number)</Label>
+                  <Input value={courseShortCode} onChange={(e) => setCourseShortCode(e.target.value)} placeholder="e.g. ACAD" />
+                </div>
+                <div className="space-y-2 md:col-span-2">
                   <Label>Course Content (one item per line)</Label>
                   <textarea className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground min-h-[120px]" value={courseContent} onChange={(e) => setCourseContent(e.target.value)} />
                 </div>
@@ -772,7 +806,12 @@ const AdminPanel = () => {
             {courses.map((course) => (
               <div key={course.id} className="bg-card border border-border rounded-lg p-4 flex items-center justify-between">
                 <div>
-                  <h4 className="font-semibold text-foreground">{course.name}</h4>
+                  <h4 className="font-semibold text-foreground">
+                    {course.name}
+                    {course.short_code && (
+                      <span className="ml-2 text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">{course.short_code}</span>
+                    )}
+                  </h4>
                   <p className="text-sm text-muted-foreground">Rs. {course.price.toLocaleString()} · {course.total_weeks} weeks · {(course.course_content || []).length} topics</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => handleEditCourse(course)} className="gap-1">
