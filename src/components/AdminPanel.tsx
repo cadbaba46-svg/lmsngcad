@@ -370,14 +370,20 @@ const AdminPanel = () => {
 
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4 mt-4">
-          <div className="flex justify-end">
-            <Button onClick={() => setShowForm(!showForm)} className="gap-2">
+          <div className="flex flex-wrap gap-2 items-center justify-between">
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, reg no, CNIC, phone, email…"
+              className="max-w-sm"
+            />
+            <Button onClick={() => { setUserRole("user"); setShowForm(!showForm); }} className="gap-2">
               <UserPlus className="h-4 w-4" /> {showForm ? "Cancel" : "Create User"}
             </Button>
           </div>
 
           {showForm && (
-            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+            <div id="admin-create-user-form" className="bg-card border border-border rounded-lg p-6 space-y-4">
               <h3 className="text-lg font-semibold text-foreground">Create New User</h3>
               <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
