@@ -42,6 +42,7 @@ interface Course {
   total_weeks: number;
   course_content: string[];
   is_active: boolean;
+  short_code?: string | null;
 }
 
 const AdminPanel = () => {
@@ -60,6 +61,7 @@ const AdminPanel = () => {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [editProfile, setEditProfile] = useState<any | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // User form
   const [email, setEmail] = useState("");
@@ -75,18 +77,30 @@ const AdminPanel = () => {
   const [courseWeeks, setCourseWeeks] = useState("");
   const [courseContent, setCourseContent] = useState("");
   const [coursePrice, setCoursePrice] = useState("");
+  const [courseShortCode, setCourseShortCode] = useState("");
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
   const [newCoursePrice, setNewCoursePrice] = useState("");
   const [newCourseDesc, setNewCourseDesc] = useState("");
   const [newCourseWeeks, setNewCourseWeeks] = useState("12");
   const [newCourseContent, setNewCourseContent] = useState("");
+  const [newCourseShortCode, setNewCourseShortCode] = useState("");
 
   // Teacher assignment
   const [assignTeacherId, setAssignTeacherId] = useState("");
   const [assignCourseId, setAssignCourseId] = useState("");
 
   const PROFILE_COLUMNS = "id,user_id,full_name,email,department,semester,roll_number,father_name,phone,cnic,created_at,gender,city,province,dob,qualification,photo_url,documents";
+
+  const matchesQuery = (p: any) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    const norm = (v: any) => String(v ?? "").toLowerCase();
+    const noDash = (v: any) => norm(v).replace(/[-\s]/g, "");
+    const qNoDash = q.replace(/[-\s]/g, "");
+    return [p.full_name, p.email, p.phone, p.cnic, p.father_name].some((f) => norm(f).includes(q))
+      || noDash(p.roll_number).includes(qNoDash);
+  };
   const fetchUsers = async () => {
     const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).order("created_at", { ascending: false });
     setUsers((data || []) as unknown as Profile[]);
@@ -155,6 +169,7 @@ const AdminPanel = () => {
       } else {
         toast.success("User created successfully. Credentials are available only in the vault.");
         setEmail(""); setFullName(""); setFatherName(""); setRollNumber(""); setPhone(""); setCnic(""); setUserRole("student");
+        setShowForm(false);
         fetchUsers();
         fetchStudents();
         fetchTeachers();
@@ -163,6 +178,14 @@ const AdminPanel = () => {
       toast.error(err.message || "Failed to create user");
     }
     setCreating(false);
+  };
+
+  const openCreateWithRole = (role: "user" | "student" | "teacher") => {
+    setUserRole(role);
+    setShowForm(true);
+    setTimeout(() => {
+      document.getElementById("admin-create-user-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
   };
 
   const handleDeleteUser = async (userId: string) => {
@@ -219,6 +242,8 @@ const AdminPanel = () => {
       city: (selectedUser as any).city || "",
       province: (selectedUser as any).province || "",
       qualification: (selectedUser as any).qualification || "",
+      qualification_type: (selectedUser as any).qualification_type || "",
+      qualification_field: (selectedUser as any).qualification_field || "",
       photo_url: (selectedUser as any).photo_url || "",
       documents_json: JSON.stringify((selectedUser as any).documents || {}, null, 2),
     });
@@ -248,9 +273,11 @@ const AdminPanel = () => {
         city: editProfile.city || null,
         province: editProfile.province || null,
         qualification: editProfile.qualification || null,
+        qualification_type: editProfile.qualification_type || null,
+        qualification_field: editProfile.qualification_field || null,
         photo_url: editProfile.photo_url || null,
         documents,
-      })
+      } as any)
       .eq("user_id", selectedUser.user_id);
     setSavingProfile(false);
     if (error) {
@@ -270,6 +297,7 @@ const AdminPanel = () => {
     setCourseWeeks(String(course.total_weeks));
     setCourseContent((course.course_content || []).join("\n"));
     setCoursePrice(String(course.price));
+    setCourseShortCode(course.short_code || "");
   };
 
   const handleSaveCourse = async () => {
@@ -280,7 +308,8 @@ const AdminPanel = () => {
         total_weeks: parseInt(courseWeeks) || 12,
         course_content: courseContent.split("\n").filter(Boolean),
         price: parseFloat(coursePrice) || 0,
-      })
+        short_code: courseShortCode.trim().toUpperCase() || null,
+      } as any)
       .eq("id", editingCourse.id);
     if (error) toast.error(error.message);
     else { toast.success("Course updated!"); setEditingCourse(null); fetchCourses(); }
@@ -294,12 +323,13 @@ const AdminPanel = () => {
       description: newCourseDesc,
       total_weeks: parseInt(newCourseWeeks) || 12,
       course_content: newCourseContent.split("\n").filter(Boolean),
-    });
+      short_code: newCourseShortCode.trim().toUpperCase() || null,
+    } as any);
     if (error) toast.error(error.message);
     else {
       toast.success("Course added!");
       setShowAddCourse(false);
-      setNewCourseName(""); setNewCoursePrice(""); setNewCourseDesc(""); setNewCourseWeeks("12"); setNewCourseContent("");
+      setNewCourseName(""); setNewCoursePrice(""); setNewCourseDesc(""); setNewCourseWeeks("12"); setNewCourseContent(""); setNewCourseShortCode("");
       fetchCourses();
     }
   };
@@ -344,14 +374,20 @@ const AdminPanel = () => {
 
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4 mt-4">
-          <div className="flex justify-end">
-            <Button onClick={() => setShowForm(!showForm)} className="gap-2">
+          <div className="flex flex-wrap gap-2 items-center justify-between">
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, reg no, CNIC, phone, email…"
+              className="max-w-sm"
+            />
+            <Button onClick={() => { setUserRole("user"); setShowForm(!showForm); }} className="gap-2">
               <UserPlus className="h-4 w-4" /> {showForm ? "Cancel" : "Create User"}
             </Button>
           </div>
 
           {showForm && (
-            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+            <div id="admin-create-user-form" className="bg-card border border-border rounded-lg p-6 space-y-4">
               <h3 className="text-lg font-semibold text-foreground">Create New User</h3>
               <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -448,7 +484,9 @@ const AdminPanel = () => {
                     <div className="space-y-1"><Label className="text-xs">Date of Birth</Label><Input type="date" value={editProfile.dob || ""} onChange={(e) => setEditProfile({ ...editProfile, dob: e.target.value })} /></div>
                     <div className="space-y-1"><Label className="text-xs">City</Label><Input value={editProfile.city} onChange={(e) => setEditProfile({ ...editProfile, city: e.target.value })} /></div>
                     <div className="space-y-1"><Label className="text-xs">Province</Label><Input value={editProfile.province} onChange={(e) => setEditProfile({ ...editProfile, province: e.target.value })} /></div>
-                    <div className="space-y-1"><Label className="text-xs">Qualification</Label><Input value={editProfile.qualification} onChange={(e) => setEditProfile({ ...editProfile, qualification: e.target.value })} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Qualification Type</Label><Input value={editProfile.qualification_type} onChange={(e) => setEditProfile({ ...editProfile, qualification_type: e.target.value })} placeholder="Matric / O-Levels / DAE / FSc" /></div>
+                    <div className="space-y-1"><Label className="text-xs">Qualification Field</Label><Input value={editProfile.qualification_field} onChange={(e) => setEditProfile({ ...editProfile, qualification_field: e.target.value })} placeholder="e.g. Mechanical, Pre-Medical, Science" /></div>
+                    <div className="space-y-1 md:col-span-2"><Label className="text-xs">Qualification (legacy)</Label><Input value={editProfile.qualification} onChange={(e) => setEditProfile({ ...editProfile, qualification: e.target.value })} /></div>
                     <div className="space-y-1 md:col-span-2"><Label className="text-xs">Photo URL</Label><Input value={editProfile.photo_url} onChange={(e) => setEditProfile({ ...editProfile, photo_url: e.target.value })} placeholder="https://…" /></div>
                     <div className="space-y-1 md:col-span-2">
                       <Label className="text-xs">Documents (JSON map of label → URL)</Label>
@@ -487,10 +525,10 @@ const AdminPanel = () => {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Loading...</td></tr>
-                  ) : users.length === 0 ? (
+                  ) : users.filter(matchesQuery).length === 0 ? (
                     <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No users found.</td></tr>
                   ) : (
-                    users.map((u) => (
+                    users.filter(matchesQuery).map((u) => (
                       <tr
                         key={u.id}
                         className="border-t border-border hover:bg-muted/50 cursor-pointer"
@@ -524,7 +562,20 @@ const AdminPanel = () => {
 
         {/* Students Tab */}
         <TabsContent value="students" className="space-y-4 mt-4">
-          <h3 className="text-lg font-semibold text-foreground">All Students</h3>
+          <div className="flex flex-wrap gap-2 items-center justify-between">
+            <h3 className="text-lg font-semibold text-foreground">All Students</h3>
+            <div className="flex gap-2 items-center">
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, reg no, CNIC, phone…"
+                className="max-w-sm"
+              />
+              <Button onClick={() => openCreateWithRole("student")} className="gap-2">
+                <UserPlus className="h-4 w-4" /> Create Student
+              </Button>
+            </div>
+          </div>
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -541,10 +592,10 @@ const AdminPanel = () => {
                   </tr>
                 </thead>
                 <tbody>
-                   {students.length === 0 ? (
+                   {students.filter(matchesQuery).length === 0 ? (
                      <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No students found.</td></tr>
                   ) : (
-                    students.map((s) => (
+                    students.filter(matchesQuery).map((s) => (
                       <tr key={s.id} className="border-t border-border hover:bg-muted/50">
                         <td className="p-3 text-foreground font-medium">{s.full_name || "—"}</td>
                         <td className="p-3 text-muted-foreground font-mono text-xs">{s.email || "—"}</td>
@@ -575,7 +626,20 @@ const AdminPanel = () => {
 
         {/* Teachers Tab */}
         <TabsContent value="teachers" className="space-y-4 mt-4">
-          <h3 className="text-lg font-semibold text-foreground">Teacher Management</h3>
+          <div className="flex flex-wrap gap-2 items-center justify-between">
+            <h3 className="text-lg font-semibold text-foreground">Teacher Management</h3>
+            <div className="flex gap-2 items-center">
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search teachers…"
+                className="max-w-sm"
+              />
+              <Button onClick={() => openCreateWithRole("teacher")} className="gap-2">
+                <UserPlus className="h-4 w-4" /> Create Teacher
+              </Button>
+            </div>
+          </div>
 
           {/* Assign teacher to course */}
           <div className="bg-card border border-border rounded-lg p-4 space-y-3">
@@ -651,10 +715,10 @@ const AdminPanel = () => {
                 </tr>
               </thead>
               <tbody>
-                {teachers.length === 0 ? (
+                {teachers.filter(matchesQuery).length === 0 ? (
                   <tr><td colSpan={3} className="p-6 text-center text-muted-foreground">No teachers found. Create a user with Teacher role first.</td></tr>
                 ) : (
-                  teachers.map((t: any) => (
+                  teachers.filter(matchesQuery).map((t: any) => (
                     <tr key={t.id} className="border-t border-border hover:bg-muted/50">
                       <td className="p-3 text-foreground">{t.full_name || "—"}</td>
                       <td className="p-3 text-muted-foreground">{t.department || "—"}</td>
@@ -686,6 +750,10 @@ const AdminPanel = () => {
                 <div className="space-y-2">
                   <Label>Price (Rs.)</Label>
                   <Input type="number" value={newCoursePrice} onChange={(e) => setNewCoursePrice(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Short Code (for roll number, e.g. ACAD, MS, SW, PTC, PS)</Label>
+                  <Input value={newCourseShortCode} onChange={(e) => setNewCourseShortCode(e.target.value)} placeholder="ACAD" />
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label>Description</Label>
@@ -719,6 +787,10 @@ const AdminPanel = () => {
                   <Input type="number" value={coursePrice} onChange={(e) => setCoursePrice(e.target.value)} />
                 </div>
                 <div className="space-y-2 md:col-span-2">
+                  <Label>Short Code (for roll number)</Label>
+                  <Input value={courseShortCode} onChange={(e) => setCourseShortCode(e.target.value)} placeholder="e.g. ACAD" />
+                </div>
+                <div className="space-y-2 md:col-span-2">
                   <Label>Course Content (one item per line)</Label>
                   <textarea className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground min-h-[120px]" value={courseContent} onChange={(e) => setCourseContent(e.target.value)} />
                 </div>
@@ -734,7 +806,12 @@ const AdminPanel = () => {
             {courses.map((course) => (
               <div key={course.id} className="bg-card border border-border rounded-lg p-4 flex items-center justify-between">
                 <div>
-                  <h4 className="font-semibold text-foreground">{course.name}</h4>
+                  <h4 className="font-semibold text-foreground">
+                    {course.name}
+                    {course.short_code && (
+                      <span className="ml-2 text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">{course.short_code}</span>
+                    )}
+                  </h4>
                   <p className="text-sm text-muted-foreground">Rs. {course.price.toLocaleString()} · {course.total_weeks} weeks · {(course.course_content || []).length} topics</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => handleEditCourse(course)} className="gap-1">

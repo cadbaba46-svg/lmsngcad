@@ -41,6 +41,11 @@ const StudentProfilePanel = () => {
   const genderLabel = profile.gender
     ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1)
     : "";
+  const qType = (profile.qualification_type || "").trim();
+  const qField = (profile.qualification_field || profile.qualification || "").trim();
+  const qualificationLabel = qType && qField
+    ? `${qType} — ${qField}`
+    : qType || qField || "";
   const documents = (profile.documents && typeof profile.documents === "object")
     ? (profile.documents as Record<string, string>)
     : {};
@@ -97,7 +102,7 @@ const StudentProfilePanel = () => {
     { icon: <Calendar className="h-4 w-4" />, label: "Date of Birth", value: profile.dob },
     { icon: <Users className="h-4 w-4" />, label: "Gender", value: genderLabel },
     { icon: <MapPin className="h-4 w-4" />, label: "Domicile", value: domicile },
-    { icon: <GraduationCap className="h-4 w-4" />, label: "Qualification", value: profile.qualification },
+    { icon: <GraduationCap className="h-4 w-4" />, label: "Qualification", value: qualificationLabel },
     { icon: <IdCard className="h-4 w-4" />, label: "Registration Number", value: profile.roll_number },
   ];
 

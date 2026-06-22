@@ -152,6 +152,7 @@ export type Database = {
           is_active: boolean
           name: string
           price: number
+          short_code: string | null
           total_weeks: number
           updated_at: string
         }
@@ -163,6 +164,7 @@ export type Database = {
           is_active?: boolean
           name: string
           price?: number
+          short_code?: string | null
           total_weeks?: number
           updated_at?: string
         }
@@ -174,6 +176,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           price?: number
+          short_code?: string | null
           total_weeks?: number
           updated_at?: string
         }
@@ -273,6 +276,7 @@ export type Database = {
           challan_paid: boolean
           challan_paid_at: string | null
           course_id: string
+          course_roll_number: string | null
           created_at: string
           id: string
           status: string
@@ -285,6 +289,7 @@ export type Database = {
           challan_paid?: boolean
           challan_paid_at?: string | null
           course_id: string
+          course_roll_number?: string | null
           created_at?: string
           id?: string
           status?: string
@@ -297,6 +302,7 @@ export type Database = {
           challan_paid?: boolean
           challan_paid_at?: string | null
           course_id?: string
+          course_roll_number?: string | null
           created_at?: string
           id?: string
           status?: string
@@ -520,6 +526,8 @@ export type Database = {
           photo_url: string | null
           province: string | null
           qualification: string | null
+          qualification_field: string | null
+          qualification_type: string | null
           roll_number: string | null
           semester: string | null
           updated_at: string
@@ -543,6 +551,8 @@ export type Database = {
           photo_url?: string | null
           province?: string | null
           qualification?: string | null
+          qualification_field?: string | null
+          qualification_type?: string | null
           roll_number?: string | null
           semester?: string | null
           updated_at?: string
@@ -566,6 +576,8 @@ export type Database = {
           photo_url?: string | null
           province?: string | null
           qualification?: string | null
+          qualification_field?: string | null
+          qualification_type?: string | null
           roll_number?: string | null
           semester?: string | null
           updated_at?: string
@@ -793,6 +805,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      find_user_id_by_login: { Args: { _identifier: string }; Returns: string }
       get_teacher_students: {
         Args: { _course_ids: string[] }
         Returns: {
@@ -820,6 +833,8 @@ export type Database = {
         }
         Returns: number
       }
+      next_course_roll_number: { Args: { _course_id: string }; Returns: string }
+      next_registration_number: { Args: never; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {

@@ -13,6 +13,7 @@ interface Enrollment {
   challan_generated_at: string | null;
   challan_paid_at: string | null;
   attendance: any[];
+  course_roll_number?: string | null;
   courses: {
     id: string;
     name: string;
@@ -93,6 +94,12 @@ const CurrentCoursesPanel = () => {
                 <div>
                   <h3 className="text-lg font-bold text-foreground">{course.name}</h3>
                   <p className="text-sm text-muted-foreground">{course.description}</p>
+                  {enrollment.course_roll_number && (
+                    <p className="text-xs mt-1">
+                      <span className="text-muted-foreground">Roll Number: </span>
+                      <span className="font-mono font-semibold text-foreground">{enrollment.course_roll_number}</span>
+                    </p>
+                  )}
                 </div>
                 {statusBadge(enrollment.status, enrollment.challan_paid)}
               </div>

@@ -8,13 +8,6 @@ function generatePassword(length = 12): string {
   return Array.from(array, (byte) => chars[byte % chars.length]).join("");
 }
 
-function generateRegNumber(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `NGCAD-${year}-${rand}`;
-}
-
 async function sendTransactionalEmail(body: Record<string, unknown>) {
   const url = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -66,6 +59,8 @@ Deno.serve(async (req) => {
     const gender = personal.gender ?? null;
     const dob = personal.dob ?? null;
     const qualification = payload.qualification ?? null;
+    const qualification_type = payload.qualification_type ?? personal.qualification_type ?? null;
+    const qualification_field = payload.qualification_field ?? personal.qualification_field ?? qualification ?? null;
     const course_id = payload.course_id ?? null;
     const application_number = payload.application_number ?? null;
     const photo_url = payload.photo_url ?? personal.photo_url ?? null;
@@ -89,7 +84,14 @@ Deno.serve(async (req) => {
     }
 
     const password = generatePassword();
-    const regNumber = generateRegNumber();
+    const { data: regData, error: regErr } = await supabaseAdmin.rpc("next_registration_number");
+    if (regErr || !regData) {
+      return new Response(JSON.stringify({ error: "Failed to generate registration number" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const regNumber = regData as string;
     let enrolledCourseId: string | null = null;
 
     // Create auth user
@@ -122,6 +124,8 @@ Deno.serve(async (req) => {
           gender,
           dob,
           qualification: qualification || null,
+          qualification_type: qualification_type || null,
+          qualification_field: qualification_field || null,
           photo_url: photo_url || null,
           documents: documents || {},
           roll_number: regNumber,
