@@ -42,6 +42,7 @@ interface Course {
   total_weeks: number;
   course_content: string[];
   is_active: boolean;
+  short_code?: string | null;
 }
 
 const AdminPanel = () => {
@@ -60,6 +61,7 @@ const AdminPanel = () => {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [editProfile, setEditProfile] = useState<any | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // User form
   const [email, setEmail] = useState("");
@@ -75,18 +77,30 @@ const AdminPanel = () => {
   const [courseWeeks, setCourseWeeks] = useState("");
   const [courseContent, setCourseContent] = useState("");
   const [coursePrice, setCoursePrice] = useState("");
+  const [courseShortCode, setCourseShortCode] = useState("");
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
   const [newCoursePrice, setNewCoursePrice] = useState("");
   const [newCourseDesc, setNewCourseDesc] = useState("");
   const [newCourseWeeks, setNewCourseWeeks] = useState("12");
   const [newCourseContent, setNewCourseContent] = useState("");
+  const [newCourseShortCode, setNewCourseShortCode] = useState("");
 
   // Teacher assignment
   const [assignTeacherId, setAssignTeacherId] = useState("");
   const [assignCourseId, setAssignCourseId] = useState("");
 
   const PROFILE_COLUMNS = "id,user_id,full_name,email,department,semester,roll_number,father_name,phone,cnic,created_at,gender,city,province,dob,qualification,photo_url,documents";
+
+  const matchesQuery = (p: any) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    const norm = (v: any) => String(v ?? "").toLowerCase();
+    const noDash = (v: any) => norm(v).replace(/[-\s]/g, "");
+    const qNoDash = q.replace(/[-\s]/g, "");
+    return [p.full_name, p.email, p.phone, p.cnic, p.father_name].some((f) => norm(f).includes(q))
+      || noDash(p.roll_number).includes(qNoDash);
+  };
   const fetchUsers = async () => {
     const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).order("created_at", { ascending: false });
     setUsers((data || []) as unknown as Profile[]);
@@ -155,6 +169,7 @@ const AdminPanel = () => {
       } else {
         toast.success("User created successfully. Credentials are available only in the vault.");
         setEmail(""); setFullName(""); setFatherName(""); setRollNumber(""); setPhone(""); setCnic(""); setUserRole("student");
+        setShowForm(false);
         fetchUsers();
         fetchStudents();
         fetchTeachers();
@@ -163,6 +178,14 @@ const AdminPanel = () => {
       toast.error(err.message || "Failed to create user");
     }
     setCreating(false);
+  };
+
+  const openCreateWithRole = (role: "user" | "student" | "teacher") => {
+    setUserRole(role);
+    setShowForm(true);
+    setTimeout(() => {
+      document.getElementById("admin-create-user-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
   };
 
   const handleDeleteUser = async (userId: string) => {
@@ -270,6 +293,7 @@ const AdminPanel = () => {
     setCourseWeeks(String(course.total_weeks));
     setCourseContent((course.course_content || []).join("\n"));
     setCoursePrice(String(course.price));
+    setCourseShortCode(course.short_code || "");
   };
 
   const handleSaveCourse = async () => {
@@ -280,7 +304,8 @@ const AdminPanel = () => {
         total_weeks: parseInt(courseWeeks) || 12,
         course_content: courseContent.split("\n").filter(Boolean),
         price: parseFloat(coursePrice) || 0,
-      })
+        short_code: courseShortCode.trim().toUpperCase() || null,
+      } as any)
       .eq("id", editingCourse.id);
     if (error) toast.error(error.message);
     else { toast.success("Course updated!"); setEditingCourse(null); fetchCourses(); }
@@ -294,12 +319,13 @@ const AdminPanel = () => {
       description: newCourseDesc,
       total_weeks: parseInt(newCourseWeeks) || 12,
       course_content: newCourseContent.split("\n").filter(Boolean),
-    });
+      short_code: newCourseShortCode.trim().toUpperCase() || null,
+    } as any);
     if (error) toast.error(error.message);
     else {
       toast.success("Course added!");
       setShowAddCourse(false);
-      setNewCourseName(""); setNewCoursePrice(""); setNewCourseDesc(""); setNewCourseWeeks("12"); setNewCourseContent("");
+      setNewCourseName(""); setNewCoursePrice(""); setNewCourseDesc(""); setNewCourseWeeks("12"); setNewCourseContent(""); setNewCourseShortCode("");
       fetchCourses();
     }
   };
