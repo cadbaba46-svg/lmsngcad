@@ -62,6 +62,8 @@ Deno.serve(async (req) => {
     const qualification_type = payload.qualification_type ?? personal.qualification_type ?? null;
     const qualification_field = payload.qualification_field ?? personal.qualification_field ?? qualification ?? null;
     const course_id = payload.course_id ?? null;
+    const course_short_code: string | null =
+      payload.course_short_code ?? payload.short_code ?? payload.course_code ?? null;
     const application_number = payload.application_number ?? null;
     const photo_url = payload.photo_url ?? personal.photo_url ?? null;
     const documents = payload.documents ?? {};
@@ -148,15 +150,28 @@ Deno.serve(async (req) => {
         .from("user_roles")
         .insert({ user_id: data.user.id, role: "student" });
 
-      // Auto-enroll in selected course
+      // Auto-enroll in selected course (resolve by id or short_code)
+      let course: { id: string; is_active: boolean } | null = null;
       if (course_id) {
-        const { data: course } = await supabaseAdmin
+        const { data } = await supabaseAdmin
           .from("courses")
           .select("id, is_active")
           .eq("id", course_id)
           .maybeSingle();
+        course = data as any;
+      }
+      if (!course && course_short_code) {
+        const code = course_short_code.trim().toUpperCase();
+        const { data } = await supabaseAdmin
+          .from("courses")
+          .select("id, is_active")
+          .ilike("short_code", code)
+          .maybeSingle();
+        course = data as any;
+      }
 
-        if (course?.is_active) {
+      if (course) {
+        if (course.is_active) {
           const { data: enrollment, error: enrollErr } = await supabaseAdmin
             .from("enrollments")
             .insert({
@@ -180,8 +195,10 @@ Deno.serve(async (req) => {
               .eq("enrollment_id", enrollment.id);
           }
         } else {
-          console.warn("course_id provided but course not found or inactive:", course_id);
+          console.warn("course found but inactive:", course.id);
         }
+      } else if (course_id || course_short_code) {
+        console.warn("course not found by id/short_code:", { course_id, course_short_code });
       }
 
       // Send welcome email with credentials
