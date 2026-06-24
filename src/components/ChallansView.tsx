@@ -154,9 +154,10 @@ const ChallansView = ({ title, icon, variant }: Props) => {
                           size="sm"
                           asChild
                           variant="default"
+                          disabled={!cnic}
                         >
                           <a
-                            href={`https://fms.ngcad.org/challan/${encodeURIComponent(c.challan_number)}`}
+                            href={`https://fms.ngcad.org/?cnic=${encodeURIComponent(cnic || "")}`}
                             target="_blank"
                             rel="noreferrer"
                           >
