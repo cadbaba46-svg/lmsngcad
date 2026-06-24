@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Loader2, CheckCircle, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,6 +15,7 @@ const TeacherAttendancePanel = () => {
   const [selectedCourse, setSelectedCourse] = useState<string>("");
   const [courses, setCourses] = useState<any[]>([]);
   const [attendanceState, setAttendanceState] = useState<Record<string, string>>({});
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
 
   useEffect(() => {
     if (!user) return;
@@ -40,7 +42,7 @@ const TeacherAttendancePanel = () => {
       setLoading(true);
       const { data: enrollments } = await supabase
         .from("enrollments")
-        .select("*")
+        .select("*, courses(total_weeks)")
         .eq("course_id", selectedCourse);
 
       if (!enrollments || enrollments.length === 0) {
@@ -62,34 +64,59 @@ const TeacherAttendancePanel = () => {
       }));
 
       setStudents(mapped);
-      const state: Record<string, string> = {};
-      mapped.forEach((s) => { state[s.id] = ""; });
-      setAttendanceState(state);
       setLoading(false);
     };
     fetchStudents();
   }, [selectedCourse]);
 
+  // Pre-fill attendance state from existing entries for the selected date
+  useEffect(() => {
+    const state: Record<string, string> = {};
+    students.forEach((s) => {
+      const arr = Array.isArray(s.attendance) ? s.attendance : [];
+      const existing = arr.find((a: any) => a.date === selectedDate);
+      state[s.id] = existing?.status || "";
+    });
+    setAttendanceState(state);
+  }, [students, selectedDate]);
+
   const handleSaveAttendance = async () => {
     setSaving(true);
-    const today = new Date().toISOString().split("T")[0];
+    const dateStr = selectedDate;
 
     for (const student of students) {
       const status = attendanceState[student.id];
       if (!status) continue;
 
       const existingAttendance = Array.isArray(student.attendance) ? student.attendance : [];
-      const filtered = existingAttendance.filter((a: any) => a.date !== today);
-      const updated = [...filtered, { date: today, status }];
+      const filtered = existingAttendance.filter((a: any) => a.date !== dateStr);
+      const updated = [...filtered, { date: dateStr, status }];
 
       await supabase
         .from("enrollments")
         .update({ attendance: updated as any })
         .eq("id", student.id);
+      // reflect locally so percentages update without refetch
+      student.attendance = updated;
     }
 
     toast.success("Attendance saved!");
+    setStudents([...students]);
     setSaving(false);
+  };
+
+  const calcPercents = (s: any) => {
+    const arr = Array.isArray(s.attendance) ? s.attendance : [];
+    const present = arr.filter((a: any) => a.status === "present").length;
+    const markedTotal = arr.length;
+    const totalWeeks = s.courses?.total_weeks || 0;
+    return {
+      running: markedTotal > 0 ? Math.round((present / markedTotal) * 100) : 0,
+      overall: totalWeeks > 0 ? Math.round((present / totalWeeks) * 100) : 0,
+      present,
+      markedTotal,
+      totalWeeks,
+    };
   };
 
   if (loading && courses.length === 0) return <div className="p-6 flex items-center justify-center min-h-[300px]"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
@@ -118,7 +145,16 @@ const TeacherAttendancePanel = () => {
             </Select>
           </div>
 
-          <div className="text-sm text-muted-foreground">Date: <strong className="text-foreground">{new Date().toLocaleDateString()}</strong></div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-medium text-muted-foreground">Date:</span>
+            <Input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-44"
+            />
+            <span className="text-xs text-muted-foreground">Pick any date (past, today, or future).</span>
+          </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
@@ -133,15 +169,27 @@ const TeacherAttendancePanel = () => {
                       <th className="text-left p-3 font-medium text-muted-foreground">#</th>
                       <th className="text-left p-3 font-medium text-muted-foreground">Name</th>
                       <th className="text-left p-3 font-medium text-muted-foreground">Roll Number</th>
+                      <th className="text-left p-3 font-medium text-muted-foreground">Running %</th>
+                      <th className="text-left p-3 font-medium text-muted-foreground">Total %</th>
                       <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {students.map((s, idx) => (
+                    {students.map((s, idx) => {
+                      const p = calcPercents(s);
+                      return (
                       <tr key={s.id} className="border-t border-border hover:bg-muted/50">
                         <td className="p-3 text-muted-foreground">{idx + 1}</td>
                         <td className="p-3 text-foreground">{s.profile?.full_name || "—"}</td>
                         <td className="p-3 text-muted-foreground">{s.profile?.roll_number || "—"}</td>
+                        <td className="p-3 text-foreground">
+                          <span className="font-semibold">{p.running}%</span>
+                          <span className="text-xs text-muted-foreground ml-1">({p.present}/{p.markedTotal})</span>
+                        </td>
+                        <td className="p-3 text-foreground">
+                          <span className="font-semibold">{p.overall}%</span>
+                          <span className="text-xs text-muted-foreground ml-1">({p.present}/{p.totalWeeks})</span>
+                        </td>
                         <td className="p-3">
                           <Select
                             value={attendanceState[s.id] || ""}
@@ -158,7 +206,7 @@ const TeacherAttendancePanel = () => {
                           </Select>
                         </td>
                       </tr>
-                    ))}
+                    );})}
                   </tbody>
                 </table>
               </div>

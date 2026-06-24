@@ -78,9 +78,12 @@ const CurrentCoursesPanel = () => {
       <div className="grid gap-4">
         {enrollments.map((enrollment) => {
           const course = enrollment.courses;
-          const attendanceCount = (enrollment.attendance || []).length;
-          const attendancePercent = course.total_weeks > 0
-            ? Math.round((attendanceCount / course.total_weeks) * 100)
+          const attendanceArr = Array.isArray(enrollment.attendance) ? enrollment.attendance : [];
+          const presentCount = attendanceArr.filter((a: any) => a?.status === "present").length;
+          const markedCount = attendanceArr.length;
+          const runningPercent = markedCount > 0 ? Math.round((presentCount / markedCount) * 100) : 0;
+          const totalPercent = course.total_weeks > 0
+            ? Math.round((presentCount / course.total_weeks) * 100)
             : 0;
 
           return (
@@ -125,9 +128,12 @@ const CurrentCoursesPanel = () => {
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Attendance</p>
                   <div className="flex items-center gap-2">
-                    <Progress value={attendancePercent} className="flex-1 h-2" />
-                    <span className="text-xs font-medium text-foreground">{attendanceCount}/{course.total_weeks}</span>
+                    <Progress value={totalPercent} className="flex-1 h-2" />
+                    <span className="text-xs font-medium text-foreground">{presentCount}/{course.total_weeks}</span>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Running: <span className="font-semibold text-foreground">{runningPercent}%</span> ({presentCount}/{markedCount}) · Total: <span className="font-semibold text-foreground">{totalPercent}%</span>
+                  </p>
                 </div>
               </div>
 

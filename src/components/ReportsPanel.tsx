@@ -31,7 +31,11 @@ interface AttendanceRow {
   course: string;
   weeks: number;
   attended: number;
+  present: number;
+  marked: number;
+  runningPercent: number;
   percent: number;
+  sessions: { date: string; status: string }[];
 }
 
 interface SurveyRow {
@@ -47,7 +51,21 @@ const ReportsPanel = () => {
   const [loading, setLoading] = useState(false);
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
   const [surveys, setSurveys] = useState<SurveyRow[]>([]);
+  const [courseOptions, setCourseOptions] = useState<{ id: string; name: string }[]>([]);
+  const [courseFilter, setCourseFilter] = useState<string>("all");
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Load enrolled courses for dropdown filter
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("enrollments")
+      .select("course_id, courses(name)")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        setCourseOptions((data || []).map((e: any) => ({ id: e.course_id, name: e.courses?.name || "Unknown" })));
+      });
+  }, [user]);
 
   const loadReport = async () => {
     if (!user) return;
@@ -57,16 +75,28 @@ const ReportsPanel = () => {
     if (selected === "attendance") {
       const { data } = await supabase
         .from("enrollments")
-        .select("attendance, courses(name, total_weeks)")
+        .select("course_id, attendance, courses(name, total_weeks)")
         .eq("user_id", user.id);
-      const rows: AttendanceRow[] = (data || []).map((e: any) => {
-        const attended = Array.isArray(e.attendance) ? e.attendance.length : 0;
+      const opts = (data || []).map((e: any) => ({ id: e.course_id, name: e.courses?.name || "Unknown" }));
+      setCourseOptions(opts);
+      const filtered = (data || []).filter((e: any) => courseFilter === "all" || e.course_id === courseFilter);
+      const rows: AttendanceRow[] = filtered.map((e: any) => {
+        const arr = Array.isArray(e.attendance) ? e.attendance : [];
+        const present = arr.filter((a: any) => a?.status === "present").length;
+        const marked = arr.length;
         const weeks = e.courses?.total_weeks || 0;
+        const sessions = [...arr]
+          .filter((a: any) => a?.date)
+          .sort((a: any, b: any) => (a.date < b.date ? -1 : 1));
         return {
           course: e.courses?.name || "Unknown",
           weeks,
-          attended,
-          percent: weeks > 0 ? Math.round((attended / weeks) * 100) : 0,
+          attended: marked,
+          present,
+          marked,
+          runningPercent: marked > 0 ? Math.round((present / marked) * 100) : 0,
+          percent: weeks > 0 ? Math.round((present / weeks) * 100) : 0,
+          sessions,
         };
       });
       setAttendance(rows);
@@ -164,6 +194,22 @@ const ReportsPanel = () => {
             </SelectContent>
           </Select>
         </div>
+        {selected === "attendance" && courseOptions.length > 0 && (
+          <div className="space-y-2">
+            <Label>Course / Subject</Label>
+            <Select value={courseFilter} onValueChange={setCourseFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All My Courses</SelectItem>
+                {courseOptions.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <Button onClick={loadReport} disabled={loading}>
           {loading ? "Loading..." : "View Report"}
         </Button>
@@ -206,31 +252,38 @@ const AttendanceTable = ({ rows }: { rows: AttendanceRow[] }) => {
     return <p className="text-sm text-gray-600">No enrollments to report.</p>;
   const avg =
     Math.round(rows.reduce((a, r) => a + r.percent, 0) / rows.length) || 0;
+  const avgRunning =
+    Math.round(rows.reduce((a, r) => a + r.runningPercent, 0) / rows.length) || 0;
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <Metric label="Courses" value={rows.length.toString()} />
         <Metric
-          label="Total Sessions Attended"
-          value={rows.reduce((a, r) => a + r.attended, 0).toString()}
+          label="Sessions Marked"
+          value={rows.reduce((a, r) => a + r.marked, 0).toString()}
         />
-        <Metric label="Average Attendance" value={`${avg}%`} />
+        <Metric label="Avg Running %" value={`${avgRunning}%`} />
+        <Metric label="Avg Total %" value={`${avg}%`} />
       </div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Course</TableHead>
-            <TableHead className="text-right">Attended</TableHead>
+            <TableHead className="text-right">Present</TableHead>
+            <TableHead className="text-right">Marked</TableHead>
             <TableHead className="text-right">Total Weeks</TableHead>
-            <TableHead>Progress</TableHead>
+            <TableHead className="text-right">Running %</TableHead>
+            <TableHead>Total %</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((r) => (
             <TableRow key={r.course}>
               <TableCell className="font-medium">{r.course}</TableCell>
-              <TableCell className="text-right">{r.attended}</TableCell>
+              <TableCell className="text-right">{r.present}</TableCell>
+              <TableCell className="text-right">{r.marked}</TableCell>
               <TableCell className="text-right">{r.weeks}</TableCell>
+              <TableCell className="text-right">{r.runningPercent}%</TableCell>
               <TableCell className="w-48">
                 <div className="flex items-center gap-2">
                   <Progress value={r.percent} className="flex-1 h-2" />
@@ -241,6 +294,34 @@ const AttendanceTable = ({ rows }: { rows: AttendanceRow[] }) => {
           ))}
         </TableBody>
       </Table>
+
+      {rows.map((r) => (
+        <div key={`sess-${r.course}`} className="border rounded-md p-3">
+          <p className="font-semibold text-sm mb-2">{r.course} — Marked Sessions ({r.sessions.length})</p>
+          {r.sessions.length === 0 ? (
+            <p className="text-xs text-gray-600">No attendance marked yet.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {r.sessions.map((s, i) => (
+                  <TableRow key={`${r.course}-${s.date}-${i}`}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell>{new Date(s.date).toLocaleDateString()}</TableCell>
+                    <TableCell className="capitalize">{s.status}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      ))}
     </div>
   );
 };

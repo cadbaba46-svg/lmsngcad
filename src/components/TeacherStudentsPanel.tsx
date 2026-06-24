@@ -27,7 +27,7 @@ const TeacherStudentsPanel = () => {
 
       const { data: enrollments } = await supabase
         .from("enrollments")
-        .select("*")
+        .select("*, courses(total_weeks)")
         .in("course_id", courseIds);
 
       if (!enrollments || enrollments.length === 0) {
@@ -45,12 +45,13 @@ const TeacherStudentsPanel = () => {
       const courseMap = Object.fromEntries(assignments.map((a: any) => [a.course_id, a.courses?.name]));
 
       setStudents(
-        enrollments.map((e) => ({
+        enrollments.map((e: any) => ({
           ...e,
           course_name: courseMap[e.course_id],
           student_name: profileMap[e.user_id]?.full_name,
           roll_number: profileMap[e.user_id]?.roll_number,
           department: profileMap[e.user_id]?.department,
+          total_weeks: e.courses?.total_weeks || 0,
         }))
       );
       setLoading(false);
@@ -75,17 +76,25 @@ const TeacherStudentsPanel = () => {
                 <th className="text-left p-3 font-medium text-muted-foreground">Name</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Roll Number</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Course</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Department</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Running %</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Total %</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Payment</th>
               </tr>
             </thead>
             <tbody>
-              {students.map((s) => (
+              {students.map((s) => {
+                const arr = Array.isArray(s.attendance) ? s.attendance : [];
+                const present = arr.filter((a: any) => a?.status === "present").length;
+                const marked = arr.length;
+                const running = marked > 0 ? Math.round((present / marked) * 100) : 0;
+                const total = s.total_weeks > 0 ? Math.round((present / s.total_weeks) * 100) : 0;
+                return (
                 <tr key={s.id} className="border-t border-border hover:bg-muted/50">
                   <td className="p-3 text-foreground">{s.student_name || "—"}</td>
                   <td className="p-3 text-muted-foreground">{s.roll_number || "—"}</td>
                   <td className="p-3 text-muted-foreground">{s.course_name || "—"}</td>
-                  <td className="p-3 text-muted-foreground">{s.department || "—"}</td>
+                  <td className="p-3 text-foreground"><span className="font-semibold">{running}%</span> <span className="text-xs text-muted-foreground">({present}/{marked})</span></td>
+                  <td className="p-3 text-foreground"><span className="font-semibold">{total}%</span> <span className="text-xs text-muted-foreground">({present}/{s.total_weeks})</span></td>
                   <td className="p-3">
                     {s.challan_paid ? (
                       <span className="text-green-600 font-medium">Paid</span>
@@ -94,7 +103,7 @@ const TeacherStudentsPanel = () => {
                     )}
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </div>
