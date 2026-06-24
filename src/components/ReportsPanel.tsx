@@ -55,6 +55,18 @@ const ReportsPanel = () => {
   const [courseFilter, setCourseFilter] = useState<string>("all");
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Load enrolled courses for dropdown filter
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("enrollments")
+      .select("course_id, courses(name)")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        setCourseOptions((data || []).map((e: any) => ({ id: e.course_id, name: e.courses?.name || "Unknown" })));
+      });
+  }, [user]);
+
   const loadReport = async () => {
     if (!user) return;
     setLoading(true);
