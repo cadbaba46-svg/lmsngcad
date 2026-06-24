@@ -252,31 +252,38 @@ const AttendanceTable = ({ rows }: { rows: AttendanceRow[] }) => {
     return <p className="text-sm text-gray-600">No enrollments to report.</p>;
   const avg =
     Math.round(rows.reduce((a, r) => a + r.percent, 0) / rows.length) || 0;
+  const avgRunning =
+    Math.round(rows.reduce((a, r) => a + r.runningPercent, 0) / rows.length) || 0;
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <Metric label="Courses" value={rows.length.toString()} />
         <Metric
-          label="Total Sessions Attended"
-          value={rows.reduce((a, r) => a + r.attended, 0).toString()}
+          label="Sessions Marked"
+          value={rows.reduce((a, r) => a + r.marked, 0).toString()}
         />
-        <Metric label="Average Attendance" value={`${avg}%`} />
+        <Metric label="Avg Running %" value={`${avgRunning}%`} />
+        <Metric label="Avg Total %" value={`${avg}%`} />
       </div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Course</TableHead>
-            <TableHead className="text-right">Attended</TableHead>
+            <TableHead className="text-right">Present</TableHead>
+            <TableHead className="text-right">Marked</TableHead>
             <TableHead className="text-right">Total Weeks</TableHead>
-            <TableHead>Progress</TableHead>
+            <TableHead className="text-right">Running %</TableHead>
+            <TableHead>Total %</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((r) => (
             <TableRow key={r.course}>
               <TableCell className="font-medium">{r.course}</TableCell>
-              <TableCell className="text-right">{r.attended}</TableCell>
+              <TableCell className="text-right">{r.present}</TableCell>
+              <TableCell className="text-right">{r.marked}</TableCell>
               <TableCell className="text-right">{r.weeks}</TableCell>
+              <TableCell className="text-right">{r.runningPercent}%</TableCell>
               <TableCell className="w-48">
                 <div className="flex items-center gap-2">
                   <Progress value={r.percent} className="flex-1 h-2" />
@@ -287,6 +294,34 @@ const AttendanceTable = ({ rows }: { rows: AttendanceRow[] }) => {
           ))}
         </TableBody>
       </Table>
+
+      {rows.map((r) => (
+        <div key={`sess-${r.course}`} className="border rounded-md p-3">
+          <p className="font-semibold text-sm mb-2">{r.course} — Marked Sessions ({r.sessions.length})</p>
+          {r.sessions.length === 0 ? (
+            <p className="text-xs text-gray-600">No attendance marked yet.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {r.sessions.map((s, i) => (
+                  <TableRow key={`${r.course}-${s.date}-${i}`}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell>{new Date(s.date).toLocaleDateString()}</TableCell>
+                    <TableCell className="capitalize">{s.status}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      ))}
     </div>
   );
 };
