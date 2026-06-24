@@ -31,7 +31,11 @@ interface AttendanceRow {
   course: string;
   weeks: number;
   attended: number;
+  present: number;
+  marked: number;
+  runningPercent: number;
   percent: number;
+  sessions: { date: string; status: string }[];
 }
 
 interface SurveyRow {
@@ -47,6 +51,8 @@ const ReportsPanel = () => {
   const [loading, setLoading] = useState(false);
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
   const [surveys, setSurveys] = useState<SurveyRow[]>([]);
+  const [courseOptions, setCourseOptions] = useState<{ id: string; name: string }[]>([]);
+  const [courseFilter, setCourseFilter] = useState<string>("all");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const loadReport = async () => {
@@ -57,16 +63,28 @@ const ReportsPanel = () => {
     if (selected === "attendance") {
       const { data } = await supabase
         .from("enrollments")
-        .select("attendance, courses(name, total_weeks)")
+        .select("course_id, attendance, courses(name, total_weeks)")
         .eq("user_id", user.id);
-      const rows: AttendanceRow[] = (data || []).map((e: any) => {
-        const attended = Array.isArray(e.attendance) ? e.attendance.length : 0;
+      const opts = (data || []).map((e: any) => ({ id: e.course_id, name: e.courses?.name || "Unknown" }));
+      setCourseOptions(opts);
+      const filtered = (data || []).filter((e: any) => courseFilter === "all" || e.course_id === courseFilter);
+      const rows: AttendanceRow[] = filtered.map((e: any) => {
+        const arr = Array.isArray(e.attendance) ? e.attendance : [];
+        const present = arr.filter((a: any) => a?.status === "present").length;
+        const marked = arr.length;
         const weeks = e.courses?.total_weeks || 0;
+        const sessions = [...arr]
+          .filter((a: any) => a?.date)
+          .sort((a: any, b: any) => (a.date < b.date ? -1 : 1));
         return {
           course: e.courses?.name || "Unknown",
           weeks,
-          attended,
-          percent: weeks > 0 ? Math.round((attended / weeks) * 100) : 0,
+          attended: marked,
+          present,
+          marked,
+          runningPercent: marked > 0 ? Math.round((present / marked) * 100) : 0,
+          percent: weeks > 0 ? Math.round((present / weeks) * 100) : 0,
+          sessions,
         };
       });
       setAttendance(rows);
@@ -164,6 +182,22 @@ const ReportsPanel = () => {
             </SelectContent>
           </Select>
         </div>
+        {selected === "attendance" && courseOptions.length > 0 && (
+          <div className="space-y-2">
+            <Label>Course / Subject</Label>
+            <Select value={courseFilter} onValueChange={setCourseFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All My Courses</SelectItem>
+                {courseOptions.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <Button onClick={loadReport} disabled={loading}>
           {loading ? "Loading..." : "View Report"}
         </Button>
