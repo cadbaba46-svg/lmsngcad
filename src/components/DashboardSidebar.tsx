@@ -61,8 +61,7 @@ const studentSections: SidebarSection[] = [
     title: "Dues Management",
     items: [
       { label: "Student Profile", id: "student-profile" },
-      { label: "Fee Challans", id: "fee-challans" },
-      { label: "Dues Summary", id: "dues-summary" },
+      { label: "Fee Challans & Dues", id: "dues-summary" },
       { label: "Miscellaneous Challan", id: "misc-challan" },
       { label: "Apply Scholarship", id: "apply-scholarship" },
     ],
