@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ShieldCheck, Smartphone } from "lucide-react";
+import { ShieldCheck, Smartphone, LogOut } from "lucide-react";
 import QRCode from "qrcode";
 
 type Stage = "loading" | "setup" | "verify" | "ok";
@@ -43,7 +43,7 @@ const hasLocalSession = (uid: string, loginAt?: string | null) => {
 };
 
 const LMSAuthenticatorGate = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [stage, setStage] = useState<Stage>(() =>
     user && hasLocalSession(user.id, user.last_sign_in_at) ? "ok" : "loading"
   );
@@ -159,6 +159,16 @@ const LMSAuthenticatorGate = ({ children }: { children: React.ReactNode }) => {
               {busy ? "Verifying…" : "Verify"}
             </Button>
           </>
+        )}
+
+        {(stage === "verify" || stage === "setup") && (
+          <Button
+            variant="outline"
+            onClick={async () => { try { await signOut?.(); } catch {} window.location.href = "/login"; }}
+            className="w-full gap-2"
+          >
+            <LogOut className="h-4 w-4" /> Logout
+          </Button>
         )}
       </div>
     </div>
