@@ -113,6 +113,9 @@ const ResetPassword = () => {
                     {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Must be at least 8 characters with 1 uppercase, 1 lowercase, 1 number, and 1 special character (e.g. !@#$).
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm-password">Confirm New Password</Label>
