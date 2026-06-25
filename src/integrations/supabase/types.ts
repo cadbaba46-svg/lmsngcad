@@ -900,6 +900,13 @@ export type Database = {
         Returns: number
       }
       find_user_id_by_login: { Args: { _identifier: string }; Returns: string }
+      get_public_teacher_profiles: {
+        Args: { _teacher_ids: string[] }
+        Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
       get_teacher_students: {
         Args: { _course_ids: string[] }
         Returns: {
