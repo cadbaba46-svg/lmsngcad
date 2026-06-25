@@ -44,8 +44,11 @@ const ResetPassword = () => {
       toast.error("Passwords do not match");
       return;
     }
-    if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{8,}$/;
+    if (!strong.test(newPassword)) {
+      toast.error(
+        "Password must be at least 8 characters and include 1 uppercase, 1 lowercase, 1 number, and 1 special character (e.g. !@#$)."
+      );
       return;
     }
     setLoading(true);
