@@ -89,6 +89,16 @@ const TeacherAttendancePanel = () => {
       if (!status) continue;
 
       const existingAttendance = Array.isArray(student.attendance) ? student.attendance : [];
+      const totalWeeks = student.courses?.total_weeks || 0;
+      const otherPresents = existingAttendance.filter(
+        (a: any) => a.date !== dateStr && a.status === "present"
+      ).length;
+      if (status === "present" && totalWeeks > 0 && otherPresents >= totalWeeks) {
+        toast.error(
+          `${student.profile?.full_name || "Student"}: attendance already reached the requirement (${totalWeeks}/${totalWeeks}). Cannot mark another "Present".`
+        );
+        continue;
+      }
       const filtered = existingAttendance.filter((a: any) => a.date !== dateStr);
       const updated = [...filtered, { date: dateStr, status }];
 
