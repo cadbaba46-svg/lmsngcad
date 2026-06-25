@@ -17,6 +17,7 @@ import CourseFreezePanel from "@/components/CourseFreezePanel";
 import SurveysForSubjectsPanel from "@/components/SurveysForSubjectsPanel";
 import ReportsPanel from "@/components/ReportsPanel";
 import ComplaintsPanel from "@/components/ComplaintsPanel";
+import ViewDMCPanel from "@/components/ViewDMCPanel";
 import MandatoryLectureGate from "@/components/MandatoryLectureGate";
 import LMSAuthenticatorGate from "@/components/LMSAuthenticatorGate";
 import ngcadLogo from "@/assets/ngcad-logo.png";
@@ -146,6 +147,8 @@ const Dashboard = () => {
         return <ReportsPanel />;
       case "complaints":
         return <ComplaintsPanel />;
+      case "view-dmc":
+        return <ViewDMCPanel />;
       case "teacher-courses":
         return <TeacherCoursesPanel />;
       case "teacher-students":

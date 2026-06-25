@@ -143,6 +143,62 @@ export type Database = {
         }
         Relationships: []
       }
+      course_evaluations: {
+        Row: {
+          cep_marks: number | null
+          cep_total: number | null
+          created_at: string
+          enrollment_id: string
+          final_marks: number | null
+          final_total: number | null
+          id: string
+          mid_marks: number | null
+          mid_total: number | null
+          oel_marks: number | null
+          oel_total: number | null
+          remarks: string | null
+          updated_at: string
+        }
+        Insert: {
+          cep_marks?: number | null
+          cep_total?: number | null
+          created_at?: string
+          enrollment_id: string
+          final_marks?: number | null
+          final_total?: number | null
+          id?: string
+          mid_marks?: number | null
+          mid_total?: number | null
+          oel_marks?: number | null
+          oel_total?: number | null
+          remarks?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cep_marks?: number | null
+          cep_total?: number | null
+          created_at?: string
+          enrollment_id?: string
+          final_marks?: number | null
+          final_total?: number | null
+          id?: string
+          mid_marks?: number | null
+          mid_total?: number | null
+          oel_marks?: number | null
+          oel_total?: number | null
+          remarks?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_evaluations_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: true
+            referencedRelation: "enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           course_content: Json | null
@@ -618,6 +674,44 @@ export type Database = {
         }
         Relationships: []
       }
+      student_teacher_messages: {
+        Row: {
+          ciphertext: string
+          course_id: string
+          created_at: string
+          id: string
+          sender_id: string
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          ciphertext: string
+          course_id: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          ciphertext?: string
+          course_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_teacher_messages_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -806,6 +900,13 @@ export type Database = {
         Returns: number
       }
       find_user_id_by_login: { Args: { _identifier: string }; Returns: string }
+      get_public_teacher_profiles: {
+        Args: { _teacher_ids: string[] }
+        Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
       get_teacher_students: {
         Args: { _course_ids: string[] }
         Returns: {

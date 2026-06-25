@@ -44,8 +44,11 @@ const ResetPassword = () => {
       toast.error("Passwords do not match");
       return;
     }
-    if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{8,}$/;
+    if (!strong.test(newPassword)) {
+      toast.error(
+        "Password must be at least 8 characters and include 1 uppercase, 1 lowercase, 1 number, and 1 special character (e.g. !@#$)."
+      );
       return;
     }
     setLoading(true);
@@ -110,6 +113,9 @@ const ResetPassword = () => {
                     {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Must be at least 8 characters with 1 uppercase, 1 lowercase, 1 number, and 1 special character (e.g. !@#$).
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm-password">Confirm New Password</Label>

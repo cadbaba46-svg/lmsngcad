@@ -26,8 +26,12 @@ Deno.serve(async (req) => {
     const email = userData.user.email || '';
 
     const { currentPassword, newPassword } = await req.json();
-    if (!newPassword || String(newPassword).length < 6) {
-      return jsonRes({ error: 'New password must be at least 6 characters' }, 400);
+    const pw = String(newPassword ?? '');
+    const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?`~]).{8,}$/;
+    if (!strong.test(pw)) {
+      return jsonRes({
+        error: 'Password must be at least 8 characters and include 1 uppercase, 1 lowercase, 1 number, and 1 special character.',
+      }, 400);
     }
 
     // If a current password was provided, verify it. Skip verification only when

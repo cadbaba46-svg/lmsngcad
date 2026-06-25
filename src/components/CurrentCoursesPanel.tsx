@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, BookOpen, Calendar, CheckCircle, XCircle, Lock } from "lucide-react";
+import { Loader2, BookOpen, Calendar, CheckCircle, XCircle, Lock, User, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import StudentTeacherChat from "@/components/StudentTeacherChat";
 
 interface Enrollment {
   id: string;
@@ -38,6 +40,8 @@ const CurrentCoursesPanel = () => {
   const { user } = useAuth();
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [teachersByCourse, setTeachersByCourse] = useState<Record<string, { id: string; full_name: string | null }>>({});
+  const [chatFor, setChatFor] = useState<{ courseId: string; teacherId: string; teacherName: string; courseName: string } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -47,7 +51,40 @@ const CurrentCoursesPanel = () => {
         .from("enrollments")
         .select("*, courses(*)")
         .eq("user_id", user.id);
-      setEnrollments((data || []) as unknown as Enrollment[]);
+      const list = (data || []) as unknown as Enrollment[];
+      setEnrollments(list);
+
+      const courseIds = Array.from(new Set(list.map((e) => e.course_id)));
+      if (courseIds.length > 0) {
+        const { data: assigns } = await (supabase as any)
+          .from("teacher_assignments")
+          .select("course_id, teacher_id")
+          .in("course_id", courseIds);
+        const teacherIds = Array.from(new Set((assigns || []).map((a: any) => a.teacher_id)));
+        let nameById: Record<string, string | null> = {};
+        if (teacherIds.length > 0) {
+          const { data: tProfiles } = await (supabase as any).rpc("get_public_teacher_profiles", {
+            _teacher_ids: teacherIds,
+          });
+          if (Array.isArray(tProfiles)) {
+            nameById = Object.fromEntries(tProfiles.map((p: any) => [p.user_id, p.full_name]));
+          } else {
+            // Fallback if RPC missing: try profiles direct (may be blocked by RLS)
+            const { data: p2 } = await (supabase as any)
+              .from("profiles")
+              .select("user_id, full_name")
+              .in("user_id", teacherIds);
+            nameById = Object.fromEntries((p2 || []).map((p: any) => [p.user_id, p.full_name]));
+          }
+        }
+        const map: Record<string, { id: string; full_name: string | null }> = {};
+        (assigns || []).forEach((a: any) => {
+          if (!map[a.course_id]) {
+            map[a.course_id] = { id: a.teacher_id, full_name: nameById[a.teacher_id] ?? null };
+          }
+        });
+        setTeachersByCourse(map);
+      }
       setLoading(false);
     };
     fetch();
@@ -152,6 +189,37 @@ const CurrentCoursesPanel = () => {
                 </div>
               )}
 
+              {/* Instructor + Contact */}
+              {enrollment.challan_paid && (() => {
+                const teacher = teachersByCourse[course.id];
+                return (
+                  <div className="border-t border-border pt-3 flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="h-4 w-4 text-primary" />
+                      <span className="text-muted-foreground">Teacher:</span>
+                      <span className="font-medium text-foreground">
+                        {teacher?.full_name || (teacher ? "Assigned" : "Not yet assigned")}
+                      </span>
+                    </div>
+                    {teacher && user && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="gap-1"
+                        onClick={() => setChatFor({
+                          courseId: course.id,
+                          teacherId: teacher.id,
+                          teacherName: teacher.full_name || "Instructor",
+                          courseName: course.name,
+                        })}
+                      >
+                        <MessageSquare className="h-4 w-4" /> Contact teacher
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
+
               {!enrollment.challan_paid && (
                 <div className="bg-destructive/10 border border-destructive/30 rounded-md p-3 text-sm text-destructive">
                   <strong>⚠️ Course Locked:</strong> Please pay your fee challan to access course content and DMC.
@@ -161,6 +229,18 @@ const CurrentCoursesPanel = () => {
           );
         })}
       </div>
+
+      {chatFor && user && (
+        <StudentTeacherChat
+          open={!!chatFor}
+          onOpenChange={(v) => !v && setChatFor(null)}
+          courseId={chatFor.courseId}
+          studentId={user.id}
+          teacherId={chatFor.teacherId}
+          teacherName={chatFor.teacherName}
+          courseName={chatFor.courseName}
+        />
+      )}
     </div>
   );
 };
