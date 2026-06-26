@@ -117,47 +117,39 @@ const ViewDMCPanel = () => {
             const present = att.filter((a: any) => a?.status === "present").length;
             const totalWeeks = current.courses?.total_weeks || 0;
             const attPct = totalWeeks > 0 ? Math.round((present / totalWeeks) * 100) : 0;
-            const fmtMark = (m?: number | null, t?: number | null) =>
-              m != null && t != null ? `${m}/${t}` : "Not yet marked";
             const has = (m?: number | null) => m != null;
+            // Final % aggregates marked components against their totals.
+            const components = [
+              { m: evalRow?.mid_marks, t: evalRow?.mid_total ?? 20 },
+              { m: evalRow?.final_marks, t: evalRow?.final_total ?? 30 },
+              { m: evalRow?.oel_marks, t: evalRow?.oel_total ?? 20 },
+              { m: evalRow?.cep_marks, t: evalRow?.cep_total ?? 20 },
+              { m: evalRow?.report_marks, t: evalRow?.report_total ?? 10 },
+            ];
+            const obtained = components.reduce((s, c) => s + (c.m != null ? Number(c.m) : 0), 0);
+            const totalMax = components.reduce((s, c) => s + Number(c.t || 0), 0);
+            const finalPct = totalMax > 0 ? Math.round((obtained / totalMax) * 100) : 0;
             return (
               <div className="bg-card border border-border rounded-lg p-5">
-                <div className="mb-3">
-                  <h3 className="text-lg font-semibold text-foreground">{current.courses?.name}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Blue tick = requirement met. Attendance & survey update in real time; the rest are marked by your teacher.
-                  </p>
+                <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">{current.courses?.name}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Blue tick = requirement met. Marks are entered by your teacher; only your final percentage is shown.
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Final Percentage</p>
+                    <p className="text-2xl font-bold text-primary">{finalPct}%</p>
+                  </div>
                 </div>
-                <Item
-                  label="Attendance (≥ 75%)"
-                  met={attPct >= 75}
-                  detail={`Current: ${attPct}% (${present}/${totalWeeks})`}
-                />
-                <Item
-                  label="Mid Assessment"
-                  met={has(evalRow?.mid_marks)}
-                  detail={`Marks: ${fmtMark(evalRow?.mid_marks, evalRow?.mid_total)}`}
-                />
-                <Item
-                  label="Final Assessment"
-                  met={has(evalRow?.final_marks)}
-                  detail={`Marks: ${fmtMark(evalRow?.final_marks, evalRow?.final_total)}`}
-                />
-                <Item
-                  label="Open Ended Lab (OEL)"
-                  met={has(evalRow?.oel_marks)}
-                  detail={`Marks: ${fmtMark(evalRow?.oel_marks, evalRow?.oel_total)}`}
-                />
-                <Item
-                  label="Complex Engineering Problem (CEP)"
-                  met={has(evalRow?.cep_marks)}
-                  detail={`Marks: ${fmtMark(evalRow?.cep_marks, evalRow?.cep_total)}`}
-                />
-                <Item
-                  label="Course Survey"
-                  met={surveySubmitted}
-                  detail={surveySubmitted ? "Submitted" : "Submit from Surveys For Subjects"}
-                />
+                <Item label="Attendance (≥ 75%)" met={attPct >= 75} detail={`Current: ${attPct}%`} />
+                <Item label="Mid Assessment" met={has(evalRow?.mid_marks)} />
+                <Item label="Final Assessment" met={has(evalRow?.final_marks)} />
+                <Item label="Open Ended Lab (OEL)" met={has(evalRow?.oel_marks)} />
+                <Item label="Complex Engineering Problem (CEP)" met={has(evalRow?.cep_marks)} />
+                <Item label="Reports" met={has(evalRow?.report_marks)} />
+                <Item label="Course Survey" met={surveySubmitted} detail={surveySubmitted ? "Submitted" : "Submit from Surveys For Subjects"} />
               </div>
             );
           })()}
