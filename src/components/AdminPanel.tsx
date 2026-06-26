@@ -485,6 +485,38 @@ const AdminPanel = () => {
                 <div><span className="text-muted-foreground">Payment:</span> <span className={`font-medium ${selectedUserEnrollment?.challan_paid ? "text-green-600" : "text-destructive"}`}>{selectedUserEnrollment ? (selectedUserEnrollment.challan_paid ? "Paid" : "Unpaid") : "N/A"}</span></div>
                 <div><span className="text-muted-foreground">Created:</span> <span className="font-medium text-foreground">{new Date(selectedUser.created_at).toLocaleDateString()}</span></div>
               </div>
+              {selectedUserEnrollment && (
+                <div className="border-t border-border pt-3 flex flex-wrap items-end gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Assign Batch / Class</Label>
+                    <Select
+                      value={selectedUserEnrollment.batch_id || ""}
+                      onValueChange={handleAssignBatch}
+                      disabled={assigningBatch}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Select active batch…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allBatches.filter((b: any) => b.course_id === selectedUserEnrollment.course_id).length === 0 ? (
+                          <div className="p-2 text-xs text-muted-foreground">No active batches for this course. Create one in the Batches tab.</div>
+                        ) : (
+                          allBatches
+                            .filter((b: any) => b.course_id === selectedUserEnrollment.course_id)
+                            .map((b: any) => (
+                              <SelectItem key={b.id} value={b.id}>
+                                {b.name} {b.course_code ? `· ${b.course_code}` : ""}
+                              </SelectItem>
+                            ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Assigning a batch auto-links the batch's teacher to this student's course.
+                  </p>
+                </div>
+              )}
               <div className="pt-2">
                 <Button size="sm" onClick={openEditProfile} className="gap-1">
                   <Settings className="h-3 w-3" /> Edit profile
