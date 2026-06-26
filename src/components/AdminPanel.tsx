@@ -64,6 +64,8 @@ const AdminPanel = () => {
   const [editProfile, setEditProfile] = useState<any | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [allBatches, setAllBatches] = useState<any[]>([]);
+  const [assigningBatch, setAssigningBatch] = useState(false);
 
   // User form
   const [email, setEmail] = useState("");
@@ -149,9 +151,32 @@ const AdminPanel = () => {
     setAssignments(data.map((a: any) => ({ ...a, teacher_name: profileMap[a.teacher_id]?.full_name })));
   };
 
+  const fetchBatches = async () => {
+    const { data } = await (supabase as any)
+      .from("batches")
+      .select("id, name, course_id, course_code, teacher_id, is_active, courses(name)")
+      .eq("is_active", true);
+    setAllBatches((data as any) || []);
+  };
+
+  const handleAssignBatch = async (batchId: string) => {
+    if (!selectedUserEnrollment) { toast.error("No enrollment to assign"); return; }
+    setAssigningBatch(true);
+    const { error } = await supabase
+      .from("enrollments")
+      .update({ batch_id: batchId } as any)
+      .eq("id", selectedUserEnrollment.id);
+    setAssigningBatch(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Batch assigned. Teacher linked automatically.");
+    const { data } = await supabase.from("enrollments").select("*, courses(name)").eq("id", selectedUserEnrollment.id).maybeSingle();
+    setSelectedUserEnrollment(data);
+    fetchAssignments();
+  };
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchUsers(), fetchCourses(), fetchTeachers(), fetchStudents(), fetchEnrollments(), fetchAssignments()]).then(() => setLoading(false));
+    Promise.all([fetchUsers(), fetchCourses(), fetchTeachers(), fetchStudents(), fetchEnrollments(), fetchAssignments(), fetchBatches()]).then(() => setLoading(false));
   }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {
