@@ -41,6 +41,47 @@ export type Database = {
         }
         Relationships: []
       }
+      batches: {
+        Row: {
+          course_code: string | null
+          course_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          teacher_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          course_code?: string | null
+          course_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          teacher_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          course_code?: string | null
+          course_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          teacher_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batches_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       challans: {
         Row: {
           amount: number
@@ -157,6 +198,8 @@ export type Database = {
           oel_marks: number | null
           oel_total: number | null
           remarks: string | null
+          report_marks: number | null
+          report_total: number | null
           updated_at: string
         }
         Insert: {
@@ -172,6 +215,8 @@ export type Database = {
           oel_marks?: number | null
           oel_total?: number | null
           remarks?: string | null
+          report_marks?: number | null
+          report_total?: number | null
           updated_at?: string
         }
         Update: {
@@ -187,6 +232,8 @@ export type Database = {
           oel_marks?: number | null
           oel_total?: number | null
           remarks?: string | null
+          report_marks?: number | null
+          report_total?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -328,6 +375,7 @@ export type Database = {
       enrollments: {
         Row: {
           attendance: Json | null
+          batch_id: string | null
           challan_generated_at: string | null
           challan_paid: boolean
           challan_paid_at: string | null
@@ -341,6 +389,7 @@ export type Database = {
         }
         Insert: {
           attendance?: Json | null
+          batch_id?: string | null
           challan_generated_at?: string | null
           challan_paid?: boolean
           challan_paid_at?: string | null
@@ -354,6 +403,7 @@ export type Database = {
         }
         Update: {
           attendance?: Json | null
+          batch_id?: string | null
           challan_generated_at?: string | null
           challan_paid?: boolean
           challan_paid_at?: string | null
@@ -366,6 +416,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "enrollments_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "enrollments_course_id_fkey"
             columns: ["course_id"]
@@ -767,27 +824,58 @@ export type Database = {
       }
       survey_submissions: {
         Row: {
+          batch_id: string | null
+          batch_name: string | null
+          course_code: string | null
           course_id: string
+          course_name: string | null
           id: string
+          roll_number: string | null
           student_id: string
+          student_name: string | null
           submitted_at: string
           survey_id: string
+          teacher_id: string | null
+          teacher_name: string | null
         }
         Insert: {
+          batch_id?: string | null
+          batch_name?: string | null
+          course_code?: string | null
           course_id: string
+          course_name?: string | null
           id?: string
+          roll_number?: string | null
           student_id: string
+          student_name?: string | null
           submitted_at?: string
           survey_id: string
+          teacher_id?: string | null
+          teacher_name?: string | null
         }
         Update: {
+          batch_id?: string | null
+          batch_name?: string | null
+          course_code?: string | null
           course_id?: string
+          course_name?: string | null
           id?: string
+          roll_number?: string | null
           student_id?: string
+          student_name?: string | null
           submitted_at?: string
           survey_id?: string
+          teacher_id?: string | null
+          teacher_name?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "survey_submissions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "survey_submissions_course_id_fkey"
             columns: ["course_id"]
