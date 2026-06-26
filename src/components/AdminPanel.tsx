@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video, Webhook } from "lucide-react";
+import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video, Webhook, Layers, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminSurveysPanel from "@/components/AdminSurveysPanel";
@@ -12,6 +12,8 @@ import CredentialVaultPanel from "@/components/CredentialVaultPanel";
 import AdminComplaintsPanel from "@/components/AdminComplaintsPanel";
 import AdminLecturesPanel from "@/components/AdminLecturesPanel";
 import WebhookTestPanel from "@/components/WebhookTestPanel";
+import AdminBatchesPanel from "@/components/AdminBatchesPanel";
+import AdminSurveyTrackingPanel from "@/components/AdminSurveyTrackingPanel";
 
 interface Profile {
   id: string;
@@ -62,6 +64,8 @@ const AdminPanel = () => {
   const [editProfile, setEditProfile] = useState<any | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [allBatches, setAllBatches] = useState<any[]>([]);
+  const [assigningBatch, setAssigningBatch] = useState(false);
 
   // User form
   const [email, setEmail] = useState("");
@@ -147,9 +151,32 @@ const AdminPanel = () => {
     setAssignments(data.map((a: any) => ({ ...a, teacher_name: profileMap[a.teacher_id]?.full_name })));
   };
 
+  const fetchBatches = async () => {
+    const { data } = await (supabase as any)
+      .from("batches")
+      .select("id, name, course_id, course_code, teacher_id, is_active, courses(name)")
+      .eq("is_active", true);
+    setAllBatches((data as any) || []);
+  };
+
+  const handleAssignBatch = async (batchId: string) => {
+    if (!selectedUserEnrollment) { toast.error("No enrollment to assign"); return; }
+    setAssigningBatch(true);
+    const { error } = await supabase
+      .from("enrollments")
+      .update({ batch_id: batchId } as any)
+      .eq("id", selectedUserEnrollment.id);
+    setAssigningBatch(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Batch assigned. Teacher linked automatically.");
+    const { data } = await supabase.from("enrollments").select("*, courses(name)").eq("id", selectedUserEnrollment.id).maybeSingle();
+    setSelectedUserEnrollment(data);
+    fetchAssignments();
+  };
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchUsers(), fetchCourses(), fetchTeachers(), fetchStudents(), fetchEnrollments(), fetchAssignments()]).then(() => setLoading(false));
+    Promise.all([fetchUsers(), fetchCourses(), fetchTeachers(), fetchStudents(), fetchEnrollments(), fetchAssignments(), fetchBatches()]).then(() => setLoading(false));
   }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -365,7 +392,9 @@ const AdminPanel = () => {
           <TabsTrigger value="students" className="gap-2"><GraduationCap className="h-4 w-4" /> Students</TabsTrigger>
           <TabsTrigger value="teachers" className="gap-2"><Users className="h-4 w-4" /> Teachers</TabsTrigger>
           <TabsTrigger value="courses" className="gap-2"><BookOpen className="h-4 w-4" /> Courses</TabsTrigger>
+          <TabsTrigger value="batches" className="gap-2"><Layers className="h-4 w-4" /> Batches</TabsTrigger>
           <TabsTrigger value="surveys" className="gap-2"><ClipboardList className="h-4 w-4" /> Surveys</TabsTrigger>
+          <TabsTrigger value="survey-tracking" className="gap-2"><BarChart3 className="h-4 w-4" /> Survey Tracking</TabsTrigger>
           <TabsTrigger value="complaints" className="gap-2"><MessageSquare className="h-4 w-4" /> Complaints</TabsTrigger>
           <TabsTrigger value="lectures" className="gap-2"><Video className="h-4 w-4" /> Lectures</TabsTrigger>
           <TabsTrigger value="vault" className="gap-2"><KeyRound className="h-4 w-4" /> Vault</TabsTrigger>
@@ -456,6 +485,38 @@ const AdminPanel = () => {
                 <div><span className="text-muted-foreground">Payment:</span> <span className={`font-medium ${selectedUserEnrollment?.challan_paid ? "text-green-600" : "text-destructive"}`}>{selectedUserEnrollment ? (selectedUserEnrollment.challan_paid ? "Paid" : "Unpaid") : "N/A"}</span></div>
                 <div><span className="text-muted-foreground">Created:</span> <span className="font-medium text-foreground">{new Date(selectedUser.created_at).toLocaleDateString()}</span></div>
               </div>
+              {selectedUserEnrollment && (
+                <div className="border-t border-border pt-3 flex flex-wrap items-end gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Assign Batch / Class</Label>
+                    <Select
+                      value={selectedUserEnrollment.batch_id || ""}
+                      onValueChange={handleAssignBatch}
+                      disabled={assigningBatch}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Select active batch…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allBatches.filter((b: any) => b.course_id === selectedUserEnrollment.course_id).length === 0 ? (
+                          <div className="p-2 text-xs text-muted-foreground">No active batches for this course. Create one in the Batches tab.</div>
+                        ) : (
+                          allBatches
+                            .filter((b: any) => b.course_id === selectedUserEnrollment.course_id)
+                            .map((b: any) => (
+                              <SelectItem key={b.id} value={b.id}>
+                                {b.name} {b.course_code ? `· ${b.course_code}` : ""}
+                              </SelectItem>
+                            ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Assigning a batch auto-links the batch's teacher to this student's course.
+                  </p>
+                </div>
+              )}
               <div className="pt-2">
                 <Button size="sm" onClick={openEditProfile} className="gap-1">
                   <Settings className="h-3 w-3" /> Edit profile
@@ -835,6 +896,12 @@ const AdminPanel = () => {
         </TabsContent>
         <TabsContent value="webhook" className="mt-4">
           <WebhookTestPanel />
+        </TabsContent>
+        <TabsContent value="batches" className="mt-4">
+          <AdminBatchesPanel />
+        </TabsContent>
+        <TabsContent value="survey-tracking" className="mt-4">
+          <AdminSurveyTrackingPanel />
         </TabsContent>
       </Tabs>
     </div>

@@ -18,7 +18,10 @@ const studentSections: SidebarSection[] = [
   },
   {
     title: "Results",
-    items: [{ label: "View DMC", id: "view-dmc" }],
+    items: [
+      { label: "View DMC", id: "view-dmc" },
+      { label: "Course Track", id: "course-track" },
+    ],
   },
   {
     title: "Admissions",
@@ -67,6 +70,7 @@ const teacherSections: SidebarSection[] = [
       { label: "My Courses", id: "teacher-courses" },
       { label: "Student Details", id: "teacher-students" },
       { label: "Attendance", id: "teacher-attendance" },
+      { label: "Mark Evaluations", id: "teacher-evaluations" },
     ],
   },
 ];
