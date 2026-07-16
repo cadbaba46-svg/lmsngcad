@@ -14,6 +14,10 @@ import {
 } from "@/components/ui/table";
 import { CheckCircle2, ExternalLink, Receipt } from "lucide-react";
 
+const FMS_URL = "https://alpihkjywjhutukwxplj.supabase.co";
+const FMS_ANON =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFscGloa2p5d2podXR1a3d4cGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4Njg5NzIsImV4cCI6MjA4NzQ0NDk3Mn0.Q229Q-Pt6ZabsDOftyrnLlkDiZdKwUm-78Ee5Pi9ZAM";
+
 interface Challan {
   id: string;
   challan_number: string;
@@ -60,7 +64,60 @@ const ChallansView = ({ title, icon, variant }: Props) => {
         .select("id,challan_number,description,issue_date,due_date,amount,currency,status,paid_at")
         .eq("user_id", user.id)
         .order("issue_date", { ascending: false });
-      if (!cancelled) setChallans((data as any) ?? []);
+      const local: Challan[] = (data as any) ?? [];
+
+      // Also fetch challans from FMS by CNIC (FMS is a separate backend where
+      // vouchers generated on fms.ngcad.org are stored).
+      let remote: Challan[] = [];
+      if (userCnic) {
+        try {
+          const res = await fetch(
+            `${FMS_URL}/rest/v1/challans?customer_cnic=eq.${encodeURIComponent(
+              userCnic
+            )}&select=id,challan_number,description,due_date,created_at,amount,currency,status,paid_at&order=created_at.desc`,
+            {
+              headers: {
+                apikey: FMS_ANON,
+                Authorization: `Bearer ${FMS_ANON}`,
+              },
+            }
+          );
+          if (res.ok) {
+            const rows = await res.json();
+            remote = (rows as any[]).map((r) => ({
+              id: `fms-${r.id}`,
+              challan_number: r.challan_number,
+              description: r.description,
+              issue_date: r.created_at,
+              due_date: r.due_date,
+              amount: r.amount,
+              currency: r.currency || "PKR",
+              status: r.status,
+              paid_at: r.paid_at,
+            }));
+          }
+        } catch {
+          // ignore FMS failures; local list still renders
+        }
+      }
+
+      // Merge, dedupe by challan_number preferring the most recently updated
+      const byNumber = new Map<string, Challan>();
+      for (const c of [...local, ...remote]) {
+        const key = c.challan_number || c.id;
+        const existing = byNumber.get(key);
+        if (!existing) byNumber.set(key, c);
+        else {
+          // prefer the paid one if statuses differ
+          if (c.status?.toLowerCase() === "paid") byNumber.set(key, c);
+        }
+      }
+      const merged = Array.from(byNumber.values()).sort((a, b) => {
+        const da = a.issue_date ? new Date(a.issue_date).getTime() : 0;
+        const db = b.issue_date ? new Date(b.issue_date).getTime() : 0;
+        return db - da;
+      });
+      if (!cancelled) setChallans(merged);
       if (!cancelled) setLoading(false);
     })();
     return () => {
