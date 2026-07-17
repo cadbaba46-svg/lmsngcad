@@ -7,7 +7,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Trash2, Video, Plus } from "lucide-react";
+import { Trash2, Video, Plus, Check } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Lecture {
   id: string;
@@ -19,10 +27,16 @@ interface Lecture {
   pass_threshold: number;
   is_active: boolean;
   course_id: string | null;
+  course_ids: string[] | null;
+  is_quiz_mandatory: boolean;
+  watch_percentage_required: number;
 }
+
+interface Course { id: string; name: string; }
 
 const AdminLecturesPanel = () => {
   const [rows, setRows] = useState<Lecture[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [show, setShow] = useState(false);
   const [title, setTitle] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -30,31 +44,79 @@ const AdminLecturesPanel = () => {
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState("300");
   const [threshold, setThreshold] = useState("7");
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [quizMandatory, setQuizMandatory] = useState(true);
+  const [watchPct, setWatchPct] = useState("80");
+  const [saving, setSaving] = useState(false);
+  const [detecting, setDetecting] = useState(false);
 
   const fetchAll = async () => {
-    const { data } = await supabase
-      .from("mandatory_lectures" as any)
-      .select("*")
-      .order("created_at", { ascending: false });
-    setRows((data || []) as unknown as Lecture[]);
+    const [{ data: lecs }, { data: cs }] = await Promise.all([
+      supabase.from("mandatory_lectures" as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("courses").select("id, name").eq("is_active", true).order("name"),
+    ]);
+    setRows((lecs || []) as unknown as Lecture[]);
+    setCourses((cs || []) as any);
   };
   useEffect(() => { fetchAll(); }, []);
+
+  const toggleCourse = (id: string) => {
+    setSelectedCourses((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+  const allSelected = courses.length > 0 && selectedCourses.length === courses.length;
+  const toggleAll = () => setSelectedCourses(allSelected ? [] : courses.map((c) => c.id));
+
+  // Auto-detect video duration
+  const detectDuration = async (url: string, type: string) => {
+    if (!url.trim()) return;
+    setDetecting(true);
+    try {
+      if (type === "url") {
+        await new Promise<void>((resolve) => {
+          const v = document.createElement("video");
+          v.preload = "metadata";
+          v.onloadedmetadata = () => {
+            if (isFinite(v.duration) && v.duration > 0) {
+              setDuration(String(Math.round(v.duration)));
+            }
+            resolve();
+          };
+          v.onerror = () => resolve();
+          v.src = url;
+          setTimeout(resolve, 8000);
+        });
+      } else if (type === "youtube") {
+        // YouTube iframe API-based detection isn't reliable without loading player.
+        // Leave manual — but try oEmbed for title only (no duration in oEmbed).
+        toast.message("YouTube duration must be entered manually.");
+      }
+    } finally {
+      setDetecting(false);
+    }
+  };
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !videoUrl.trim()) { toast.error("Title and video URL required"); return; }
+    if (selectedCourses.length === 0) { toast.error("Select at least one course"); return; }
+    setSaving(true);
     const { error } = await supabase.from("mandatory_lectures" as any).insert({
       title: title.trim(),
       description: description.trim() || null,
       video_url: videoUrl.trim(),
       video_type: videoType,
       duration_seconds: parseInt(duration) || 300,
-      pass_threshold: parseInt(threshold) || 7,
+      pass_threshold: quizMandatory ? (parseInt(threshold) || 7) : 0,
+      course_ids: selectedCourses,
+      is_quiz_mandatory: quizMandatory,
+      watch_percentage_required: Math.min(100, Math.max(0, parseInt(watchPct) || 80)),
       is_active: true,
     });
+    setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Lecture added");
     setTitle(""); setVideoUrl(""); setDescription(""); setDuration("300"); setThreshold("7");
+    setSelectedCourses([]); setQuizMandatory(true); setWatchPct("80");
     setShow(false);
     fetchAll();
   };
@@ -100,22 +162,74 @@ const AdminLecturesPanel = () => {
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Video URL *</Label>
-              <Input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://youtu.be/... or https://.../video.mp4" required />
+              <Input
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                onBlur={(e) => detectDuration(e.target.value, videoType)}
+                placeholder="https://youtu.be/... or https://.../video.mp4"
+                required
+              />
             </div>
             <div className="space-y-2">
-              <Label>Duration (seconds)</Label>
+              <Label>Duration (seconds) {detecting && <span className="text-xs text-muted-foreground">— detecting…</span>}</Label>
               <Input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} min={30} />
+              <p className="text-xs text-muted-foreground">Auto-detected for direct video URLs.</p>
             </div>
             <div className="space-y-2">
-              <Label>Pass Threshold (out of 10)</Label>
-              <Input type="number" value={threshold} onChange={(e) => setThreshold(e.target.value)} min={1} max={10} />
+              <Label>Required Watch %</Label>
+              <Input type="number" value={watchPct} onChange={(e) => setWatchPct(e.target.value)} min={1} max={100} />
             </div>
             <div className="space-y-2 md:col-span-2">
+              <Label>Applies to Courses *</Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" className="w-full justify-start font-normal">
+                    {selectedCourses.length === 0
+                      ? "Select courses…"
+                      : allSelected
+                      ? `All courses (${courses.length})`
+                      : `${selectedCourses.length} course${selectedCourses.length > 1 ? "s" : ""} selected`}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-72 max-h-80 overflow-auto bg-popover">
+                  <DropdownMenuLabel>Courses</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem checked={allSelected} onCheckedChange={toggleAll} onSelect={(e) => e.preventDefault()}>
+                    Select all
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator />
+                  {courses.map((c) => (
+                    <DropdownMenuCheckboxItem
+                      key={c.id}
+                      checked={selectedCourses.includes(c.id)}
+                      onCheckedChange={() => toggleCourse(c.id)}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      {c.name}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="md:col-span-2 flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border">
+              <Switch checked={quizMandatory} onCheckedChange={setQuizMandatory} />
+              <div className="flex-1">
+                <Label className="cursor-pointer">Quiz is mandatory</Label>
+                <p className="text-xs text-muted-foreground">If off, students only need to watch the video — no quiz, and pass threshold / content notes are disabled.</p>
+              </div>
+            </div>
+
+            <div className={`space-y-2 ${!quizMandatory ? "opacity-50 pointer-events-none" : ""}`}>
+              <Label>Pass Threshold (out of 10)</Label>
+              <Input type="number" value={threshold} onChange={(e) => setThreshold(e.target.value)} min={1} max={10} disabled={!quizMandatory} />
+            </div>
+            <div className="space-y-2 md:col-span-2 hidden md:block" />
+            <div className={`space-y-2 md:col-span-2 ${!quizMandatory ? "opacity-50 pointer-events-none" : ""}`}>
               <Label>Lecture Content / Transcript / Notes (improves AI quiz quality)</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={6} placeholder="Paste transcript, key topics, summary, or learning objectives — the AI uses this to generate accurate MCQs." />
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={6} disabled={!quizMandatory} placeholder="Paste transcript, key topics, summary, or learning objectives — the AI uses this to generate accurate MCQs." />
             </div>
           </div>
-          <Button type="submit">Save Lecture</Button>
+          <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save Lecture"}</Button>
         </form>
       )}
 
@@ -130,7 +244,7 @@ const AdminLecturesPanel = () => {
               <div className="min-w-0">
                 <div className="font-semibold text-foreground truncate">{l.title}</div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {l.video_type} · {Math.floor(l.duration_seconds / 60)}m · pass {l.pass_threshold}/10
+                  {l.video_type} · {Math.floor(l.duration_seconds / 60)}m · watch {l.watch_percentage_required ?? 80}% · {l.is_quiz_mandatory === false ? "no quiz" : `quiz pass ${l.pass_threshold}/10`} · {(l.course_ids?.length ?? 0)} course(s)
                 </div>
                 <a href={l.video_url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline truncate block">
                   {l.video_url}

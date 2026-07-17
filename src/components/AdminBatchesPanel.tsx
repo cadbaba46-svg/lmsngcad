@@ -18,6 +18,7 @@ interface Batch {
   name: string;
   teacher_id: string | null;
   is_active: boolean;
+  section?: string | null;
   courses?: { name: string; short_code: string | null };
 }
 
@@ -33,6 +34,7 @@ const AdminBatchesPanel = () => {
   const [code, setCode] = useState("");
   const [teacherId, setTeacherId] = useState<string>("");
   const [active, setActive] = useState(true);
+  const [section, setSection] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
@@ -57,7 +59,7 @@ const AdminBatchesPanel = () => {
   useEffect(() => { load(); }, []);
 
   const reset = () => {
-    setEditing(null); setCourseId(""); setName(""); setCode(""); setTeacherId(""); setActive(true);
+    setEditing(null); setCourseId(""); setName(""); setCode(""); setTeacherId(""); setActive(true); setSection("");
   };
 
   const startEdit = (b: Batch) => {
@@ -67,6 +69,7 @@ const AdminBatchesPanel = () => {
     setCode(b.course_code || b.courses?.short_code || "");
     setTeacherId(b.teacher_id || "");
     setActive(b.is_active);
+    setSection(b.section || "");
     setShowForm(true);
   };
 
@@ -80,6 +83,7 @@ const AdminBatchesPanel = () => {
       course_code: code.trim() || courses.find((c) => c.id === courseId)?.short_code || null,
       teacher_id: teacherId || null,
       is_active: active,
+      section: section || null,
     };
     const res = editing
       ? await (supabase as any).from("batches").update(payload).eq("id", editing.id)
@@ -130,6 +134,17 @@ const AdminBatchesPanel = () => {
             <Select value={teacherId} onValueChange={setTeacherId}>
               <SelectTrigger><SelectValue placeholder="Select teacher" /></SelectTrigger>
               <SelectContent>{teachers.map((t) => <SelectItem key={t.user_id} value={t.user_id}>{t.full_name || t.user_id}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Section</Label>
+            <Select value={section} onValueChange={setSection}>
+              <SelectTrigger><SelectValue placeholder="Select section (A-Z)" /></SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map((s) => (
+                  <SelectItem key={s} value={s}>Section {s}</SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
           <div className="flex items-center gap-2">

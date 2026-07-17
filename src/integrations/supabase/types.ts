@@ -49,6 +49,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          section: string | null
           teacher_id: string | null
           updated_at: string
         }
@@ -59,6 +60,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          section?: string | null
           teacher_id?: string | null
           updated_at?: string
         }
@@ -69,6 +71,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          section?: string | null
           teacher_id?: string | null
           updated_at?: string
         }
@@ -527,42 +530,51 @@ export type Database = {
       mandatory_lectures: {
         Row: {
           course_id: string | null
+          course_ids: string[]
           created_at: string
           description: string | null
           duration_seconds: number
           id: string
           is_active: boolean
+          is_quiz_mandatory: boolean
           pass_threshold: number
           title: string
           updated_at: string
           video_type: string
           video_url: string
+          watch_percentage_required: number
         }
         Insert: {
           course_id?: string | null
+          course_ids?: string[]
           created_at?: string
           description?: string | null
           duration_seconds?: number
           id?: string
           is_active?: boolean
+          is_quiz_mandatory?: boolean
           pass_threshold?: number
           title: string
           updated_at?: string
           video_type?: string
           video_url: string
+          watch_percentage_required?: number
         }
         Update: {
           course_id?: string | null
+          course_ids?: string[]
           created_at?: string
           description?: string | null
           duration_seconds?: number
           id?: string
           is_active?: boolean
+          is_quiz_mandatory?: boolean
           pass_threshold?: number
           title?: string
           updated_at?: string
           video_type?: string
           video_url?: string
+          watch_percentage_required?: number
         }
         Relationships: []
       }

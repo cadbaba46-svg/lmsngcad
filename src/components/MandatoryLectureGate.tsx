@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Lock, AlertTriangle, CheckCircle2, RotateCw, Play } from "lucide-react";
+import { Lock, AlertTriangle, CheckCircle2, RotateCw, Play, Pause } from "lucide-react";
 import { toast } from "sonner";
 
 interface Lecture {
@@ -13,13 +13,11 @@ interface Lecture {
   video_type: string;
   duration_seconds: number;
   pass_threshold: number;
+  is_quiz_mandatory?: boolean;
+  watch_percentage_required?: number;
 }
 
-interface MCQ {
-  question: string;
-  options: string[];
-}
-
+interface MCQ { question: string; options: string[]; }
 type Phase = "watching" | "loading-quiz" | "quiz" | "result";
 
 function extractYouTubeId(url: string): string | null {
@@ -27,10 +25,22 @@ function extractYouTubeId(url: string): string | null {
   return m ? m[1] : null;
 }
 
+let ytApiPromise: Promise<any> | null = null;
+function loadYouTubeAPI(): Promise<any> {
+  if (ytApiPromise) return ytApiPromise;
+  ytApiPromise = new Promise((resolve) => {
+    if ((window as any).YT?.Player) return resolve((window as any).YT);
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(tag);
+    (window as any).onYouTubeIframeAPIReady = () => resolve((window as any).YT);
+  });
+  return ytApiPromise;
+}
+
 const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPassed: () => void }) => {
   const { user } = useAuth();
   const [phase, setPhase] = useState<Phase>("watching");
-  const [videoEnded, setVideoEnded] = useState(false);
   const [strikes, setStrikes] = useState(0);
   const [warning, setWarning] = useState<string | null>(null);
   const [questions, setQuestions] = useState<MCQ[]>([]);
@@ -40,8 +50,18 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const ytPlayerRef = useRef<any>(null);
+  const ytContainerRef = useRef<HTMLDivElement>(null);
+  const [ytReady, setYtReady] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [maxWatched, setMaxWatched] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(lecture.duration_seconds || 0);
 
-  // Anti-multitasking: detect visibility/focus changes during quiz
+  const requiredPct = Math.max(1, Math.min(100, lecture.watch_percentage_required ?? 80));
+  const quizMandatory = lecture.is_quiz_mandatory !== false;
+  const ytId = lecture.video_type === "youtube" ? extractYouTubeId(lecture.video_url) : null;
+
   useEffect(() => {
     if (phase !== "quiz") return;
     let strikeCount = 0;
@@ -51,10 +71,7 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
         setStrikes(strikeCount);
         setWarning(`Don't switch tabs! Strike ${strikeCount}/3. ${strikeCount >= 3 ? "Quiz reset." : ""}`);
         if (strikeCount >= 3) {
-          // Reset answers and reshuffle by re-fetching
-          setAnswers([]);
-          setStrikes(0);
-          strikeCount = 0;
+          setAnswers([]); setStrikes(0); strikeCount = 0;
           setQuestions((q) => [...q].reverse());
           toast.error("Quiz reset due to tab switching.");
         }
@@ -69,27 +86,110 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
     };
   }, [phase]);
 
-  // Block right-click and keyboard shortcuts while in gate
   useEffect(() => {
     const prevent = (e: Event) => e.preventDefault();
     document.addEventListener("contextmenu", prevent);
     return () => document.removeEventListener("contextmenu", prevent);
   }, []);
 
-  const ytId = lecture.video_type === "youtube" ? extractYouTubeId(lecture.video_url) : null;
-
-  // For YouTube, we cannot reliably detect end without IFrame API; use a Mark Watched button gated by a minimum time
-  const [watchedSeconds, setWatchedSeconds] = useState(0);
   useEffect(() => {
-    if (phase !== "watching" || !ytId) return;
-    const t = setInterval(() => setWatchedSeconds((s) => s + 1), 1000);
-    return () => clearInterval(t);
+    if (phase !== "watching" || !ytId || !ytContainerRef.current) return;
+    let mounted = true;
+    let poll: any;
+    loadYouTubeAPI().then((YT) => {
+      if (!mounted || !ytContainerRef.current) return;
+      ytPlayerRef.current = new YT.Player(ytContainerRef.current, {
+        videoId: ytId,
+        playerVars: { controls: 0, disablekb: 1, modestbranding: 1, rel: 0, fs: 0, playsinline: 1, iv_load_policy: 3 },
+        events: {
+          onReady: () => {
+            setYtReady(true);
+            const d = ytPlayerRef.current?.getDuration?.() || 0;
+            if (d > 0) setVideoDuration(d);
+          },
+          onStateChange: (e: any) => setPlaying(e.data === 1),
+        },
+      });
+      poll = setInterval(() => {
+        const p = ytPlayerRef.current;
+        if (!p?.getCurrentTime) return;
+        const t = p.getCurrentTime() || 0;
+        setCurrentTime(t);
+        setMaxWatched((m) => {
+          if (t > m + 1.5) { p.seekTo(m, true); return m; }
+          return Math.max(m, t);
+        });
+      }, 500);
+    });
+    return () => {
+      mounted = false;
+      if (poll) clearInterval(poll);
+      try { ytPlayerRef.current?.destroy?.(); } catch { /* ignore */ }
+      ytPlayerRef.current = null;
+    };
   }, [phase, ytId]);
 
-  const minWatchSeconds = Math.max(60, Math.floor((lecture.duration_seconds || 300) * 0.8));
-  const canProceedYT = ytId && watchedSeconds >= minWatchSeconds;
+  useEffect(() => {
+    if (phase !== "watching" || ytId) return;
+    const v = videoRef.current;
+    if (!v) return;
+    const onLoaded = () => { if (isFinite(v.duration)) setVideoDuration(v.duration); };
+    const onTime = () => {
+      setCurrentTime(v.currentTime);
+      setMaxWatched((m) => Math.max(m, v.currentTime));
+    };
+    const onSeeking = () => {
+      if (v.currentTime > maxWatched + 1.5) v.currentTime = maxWatched;
+    };
+    const onPlay = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+    v.addEventListener("loadedmetadata", onLoaded);
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("seeking", onSeeking);
+    v.addEventListener("play", onPlay);
+    v.addEventListener("pause", onPause);
+    return () => {
+      v.removeEventListener("loadedmetadata", onLoaded);
+      v.removeEventListener("timeupdate", onTime);
+      v.removeEventListener("seeking", onSeeking);
+      v.removeEventListener("play", onPlay);
+      v.removeEventListener("pause", onPause);
+    };
+  }, [phase, ytId, maxWatched]);
+
+  const watchedPct = videoDuration > 0 ? Math.min(100, Math.round((maxWatched / videoDuration) * 100)) : 0;
+  const canProceed = watchedPct >= requiredPct;
+
+  const togglePlay = () => {
+    if (ytId) {
+      const p = ytPlayerRef.current; if (!p) return;
+      if (playing) p.pauseVideo(); else p.playVideo();
+    } else {
+      const v = videoRef.current; if (!v) return;
+      if (v.paused) v.play(); else v.pause();
+    }
+  };
+
+  const markLectureCompleted = async () => {
+    if (!user) return false;
+    const { error } = await (supabase as any).from("lecture_completions").upsert({
+      user_id: user.id,
+      lecture_id: lecture.id,
+      passed: true,
+      score: 0,
+      total_questions: 0,
+      completed_at: new Date().toISOString(),
+    }, { onConflict: "user_id,lecture_id" });
+    if (error) { toast.error("Failed to record completion: " + error.message); return false; }
+    return true;
+  };
 
   const startQuiz = useCallback(async () => {
+    if (!quizMandatory) {
+      const ok = await markLectureCompleted();
+      if (ok) onPassed();
+      return;
+    }
     setPhase("loading-quiz");
     try {
       const { data, error } = await supabase.functions.invoke("generate-lecture-quiz", {
@@ -108,7 +208,7 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
       toast.error(e.message || "Failed to generate quiz.");
       setPhase("watching");
     }
-  }, [lecture]);
+  }, [lecture, quizMandatory, user, onPassed]);
 
   const submitQuiz = async () => {
     if (!user || !sessionId) return;
@@ -118,31 +218,21 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
       const { data, error } = await supabase.functions.invoke("submit-lecture-quiz", {
         body: { session_id: sessionId, answers },
       });
-      if (error || data?.error) {
-        toast.error(data?.error || "Failed to submit quiz.");
-        return;
-      }
+      if (error || data?.error) { toast.error(data?.error || "Failed to submit quiz."); return; }
       setScore(data.score);
       setTotal(data.total);
       setPhase("result");
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   };
 
   const retake = () => {
-    setAnswers([]);
-    setQuestions([]);
-    setScore(0);
-    setTotal(0);
-    setSessionId(null);
-    setWarning(null);
-    setVideoEnded(false);
-    setWatchedSeconds(0);
+    setAnswers([]); setQuestions([]); setScore(0); setTotal(0); setSessionId(null); setWarning(null);
+    setMaxWatched(0); setCurrentTime(0);
     setPhase("watching");
   };
 
   const passed = phase === "result" && score >= lecture.pass_threshold;
+  const fmt = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 
   return (
     <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm overflow-y-auto">
@@ -152,7 +242,11 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
             <Lock className="h-5 w-5 text-primary" />
             <div>
               <h2 className="text-lg font-bold text-foreground">Mandatory Lecture: {lecture.title}</h2>
-              <p className="text-xs text-muted-foreground">You must watch the video and pass the quiz to access the LMS.</p>
+              <p className="text-xs text-muted-foreground">
+                {quizMandatory
+                  ? "You must watch the video and pass the quiz to access the LMS."
+                  : "You must watch the video to access the LMS."}
+              </p>
             </div>
           </div>
 
@@ -165,44 +259,43 @@ const MandatoryLectureGate = ({ lecture, onPassed }: { lecture: Lecture; onPasse
           <div className="p-5 space-y-5">
             {phase === "watching" && (
               <>
-                <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
+                <div className="aspect-video w-full bg-black rounded-lg overflow-hidden relative">
                   {ytId ? (
-                    <iframe
-                      src={`https://www.youtube.com/embed/${ytId}?modestbranding=1&rel=0&controls=1`}
-                      title={lecture.title}
-                      className="w-full h-full"
-                      allow="accelerometer; encrypted-media; picture-in-picture"
-                      allowFullScreen
-                    />
+                    <div className="w-full h-full pointer-events-none">
+                      <div ref={ytContainerRef} className="w-full h-full" />
+                    </div>
                   ) : (
                     <video
                       ref={videoRef}
                       src={lecture.video_url}
-                      controls
-                      controlsList="nodownload noplaybackrate"
+                      onContextMenu={(e) => e.preventDefault()}
                       disablePictureInPicture
-                      className="w-full h-full"
-                      onEnded={() => setVideoEnded(true)}
+                      className="w-full h-full pointer-events-none"
                     />
                   )}
                 </div>
-                {ytId ? (
-                  <div className="text-sm text-muted-foreground">
-                    Watched: {Math.floor(watchedSeconds / 60)}m {watchedSeconds % 60}s
-                    {!canProceedYT && <> · need at least {Math.floor(minWatchSeconds / 60)}m {minWatchSeconds % 60}s</>}
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Button type="button" onClick={togglePlay} size="sm" variant="secondary" className="gap-1" disabled={!!ytId && !ytReady}>
+                      {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                      {playing ? "Pause" : "Play"}
+                    </Button>
+                    <div className="text-xs text-muted-foreground tabular-nums">
+                      {fmt(currentTime)}{videoDuration > 0 && <> / {fmt(videoDuration)}</>}
+                    </div>
+                    <div className="ml-auto text-xs font-medium text-foreground">
+                      Watched {watchedPct}% <span className="text-muted-foreground">(need {requiredPct}%)</span>
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">
-                    {videoEnded ? "Video completed." : "Watch the full video to unlock the quiz."}
+                  <div className="h-2 rounded-full bg-muted overflow-hidden select-none">
+                    <div className="h-full bg-primary transition-all" style={{ width: `${watchedPct}%` }} />
                   </div>
-                )}
-                <Button
-                  onClick={startQuiz}
-                  disabled={ytId ? !canProceedYT : !videoEnded}
-                  className="w-full gap-2"
-                  size="lg"
-                >
-                  <Play className="h-4 w-4" /> Start Quiz
+                  <p className="text-xs text-muted-foreground">Seeking is disabled. This bar only shows how much you have watched.</p>
+                </div>
+
+                <Button onClick={startQuiz} disabled={!canProceed} className="w-full gap-2" size="lg">
+                  <Play className="h-4 w-4" /> {quizMandatory ? "Start Quiz" : "Mark Completed & Continue"}
                 </Button>
               </>
             )}
