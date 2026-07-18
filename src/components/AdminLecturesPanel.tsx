@@ -34,6 +34,18 @@ interface Lecture {
 
 interface Course { id: string; name: string; }
 
+const extractYouTubeId = (url: string): string | null => {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1) || null;
+    if (u.hostname.includes("youtube.com")) {
+      if (u.pathname.startsWith("/embed/")) return u.pathname.split("/")[2] || null;
+      return u.searchParams.get("v");
+    }
+  } catch {}
+  return null;
+};
+
 const AdminLecturesPanel = () => {
   const [rows, setRows] = useState<Lecture[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
