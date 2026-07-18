@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video, Webhook, Layers, BarChart3 } from "lucide-react";
+import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video, Webhook, Layers, BarChart3, Calendar } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminSurveysPanel from "@/components/AdminSurveysPanel";
@@ -14,6 +14,7 @@ import AdminLecturesPanel from "@/components/AdminLecturesPanel";
 import WebhookTestPanel from "@/components/WebhookTestPanel";
 import AdminBatchesPanel from "@/components/AdminBatchesPanel";
 import AdminSurveyTrackingPanel from "@/components/AdminSurveyTrackingPanel";
+import AdminTeacherTimetablesPanel from "@/components/AdminTeacherTimetablesPanel";
 
 interface Profile {
   id: string;
@@ -393,6 +394,7 @@ const AdminPanel = () => {
           <TabsTrigger value="teachers" className="gap-2"><Users className="h-4 w-4" /> Teachers</TabsTrigger>
           <TabsTrigger value="courses" className="gap-2"><BookOpen className="h-4 w-4" /> Courses</TabsTrigger>
           <TabsTrigger value="batches" className="gap-2"><Layers className="h-4 w-4" /> Batches</TabsTrigger>
+          <TabsTrigger value="timetables" className="gap-2"><Calendar className="h-4 w-4" /> Timetables</TabsTrigger>
           <TabsTrigger value="surveys" className="gap-2"><ClipboardList className="h-4 w-4" /> Surveys</TabsTrigger>
           <TabsTrigger value="survey-tracking" className="gap-2"><BarChart3 className="h-4 w-4" /> Survey Tracking</TabsTrigger>
           <TabsTrigger value="complaints" className="gap-2"><MessageSquare className="h-4 w-4" /> Complaints</TabsTrigger>
@@ -902,6 +904,9 @@ const AdminPanel = () => {
         </TabsContent>
         <TabsContent value="survey-tracking" className="mt-4">
           <AdminSurveyTrackingPanel />
+        </TabsContent>
+        <TabsContent value="timetables" className="mt-4">
+          <AdminTeacherTimetablesPanel />
         </TabsContent>
       </Tabs>
     </div>
