@@ -22,6 +22,8 @@ import CourseTrackPanel from "@/components/CourseTrackPanel";
 import TeacherEvaluationsPanel from "@/components/TeacherEvaluationsPanel";
 import MandatoryLectureGate from "@/components/MandatoryLectureGate";
 import LMSAuthenticatorGate from "@/components/LMSAuthenticatorGate";
+import DepartmentTimeTablePanel from "@/components/DepartmentTimeTablePanel";
+import StudentTimeTablePanel from "@/components/StudentTimeTablePanel";
 import ngcadLogo from "@/assets/ngcad-logo.png";
 import { LogOut } from "lucide-react";
 import { Helmet } from "react-helmet-async";
@@ -153,6 +155,10 @@ const Dashboard = () => {
         return <ViewDMCPanel />;
       case "course-track":
         return <CourseTrackPanel />;
+      case "dept-timetable":
+        return <DepartmentTimeTablePanel />;
+      case "student-timetable":
+        return <StudentTimeTablePanel />;
       case "teacher-courses":
         return <TeacherCoursesPanel />;
       case "teacher-students":
