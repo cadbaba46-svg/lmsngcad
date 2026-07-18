@@ -905,6 +905,9 @@ const AdminPanel = () => {
         <TabsContent value="survey-tracking" className="mt-4">
           <AdminSurveyTrackingPanel />
         </TabsContent>
+        <TabsContent value="timetables" className="mt-4">
+          <AdminTeacherTimetablesPanel />
+        </TabsContent>
       </Tabs>
     </div>
   );
