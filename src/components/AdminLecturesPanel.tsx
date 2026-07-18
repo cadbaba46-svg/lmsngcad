@@ -86,9 +86,46 @@ const AdminLecturesPanel = () => {
           setTimeout(resolve, 8000);
         });
       } else if (type === "youtube") {
-        // YouTube iframe API-based detection isn't reliable without loading player.
-        // Leave manual — but try oEmbed for title only (no duration in oEmbed).
-        toast.message("YouTube duration must be entered manually.");
+        // Use YouTube IFrame API to read duration
+        const id = extractYouTubeId(url);
+        if (!id) { toast.message("Could not parse YouTube URL"); return; }
+        await new Promise<void>((resolve) => {
+          const container = document.createElement("div");
+          container.style.position = "fixed";
+          container.style.left = "-9999px";
+          container.style.top = "0";
+          container.style.width = "1px";
+          container.style.height = "1px";
+          const target = document.createElement("div");
+          container.appendChild(target);
+          document.body.appendChild(container);
+
+          const cleanup = () => { try { document.body.removeChild(container); } catch {} };
+          const timeout = setTimeout(() => { cleanup(); resolve(); }, 10000);
+
+          const loadPlayer = () => {
+            const YT = (window as any).YT;
+            const player = new YT.Player(target, {
+              videoId: id,
+              events: {
+                onReady: () => {
+                  const d = player.getDuration?.();
+                  if (d && d > 0) setDuration(String(Math.round(d)));
+                  clearTimeout(timeout);
+                  try { player.destroy?.(); } catch {}
+                  cleanup(); resolve();
+                },
+              },
+            });
+          };
+          if ((window as any).YT && (window as any).YT.Player) loadPlayer();
+          else {
+            const s = document.createElement("script");
+            s.src = "https://www.youtube.com/iframe_api";
+            (window as any).onYouTubeIframeAPIReady = loadPlayer;
+            document.head.appendChild(s);
+          }
+        });
       }
     } finally {
       setDetecting(false);
@@ -100,7 +137,7 @@ const AdminLecturesPanel = () => {
     if (!title.trim() || !videoUrl.trim()) { toast.error("Title and video URL required"); return; }
     if (selectedCourses.length === 0) { toast.error("Select at least one course"); return; }
     setSaving(true);
-    const { error } = await supabase.from("mandatory_lectures" as any).insert({
+    const payload = {
       title: title.trim(),
       description: description.trim() || null,
       video_url: videoUrl.trim(),
@@ -108,12 +145,14 @@ const AdminLecturesPanel = () => {
       duration_seconds: parseInt(duration) || 300,
       pass_threshold: quizMandatory ? (parseInt(threshold) || 7) : 0,
       course_ids: selectedCourses,
+      course_id: selectedCourses[0], // legacy NOT NULL column fallback
       is_quiz_mandatory: quizMandatory,
       watch_percentage_required: Math.min(100, Math.max(0, parseInt(watchPct) || 80)),
       is_active: true,
-    });
+    };
+    const { error } = await supabase.from("mandatory_lectures" as any).insert(payload);
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { console.error("[AdminLecturesPanel] insert failed", error, payload); toast.error(error.message || "Failed to add lecture"); return; }
     toast.success("Lecture added");
     setTitle(""); setVideoUrl(""); setDescription(""); setDuration("300"); setThreshold("7");
     setSelectedCourses([]); setQuizMandatory(true); setWatchPct("80");
