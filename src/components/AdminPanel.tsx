@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video, Webhook, Layers, BarChart3, Calendar } from "lucide-react";
+import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video, Webhook, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminSurveysPanel from "@/components/AdminSurveysPanel";
@@ -12,7 +12,6 @@ import CredentialVaultPanel from "@/components/CredentialVaultPanel";
 import AdminComplaintsPanel from "@/components/AdminComplaintsPanel";
 import AdminLecturesPanel from "@/components/AdminLecturesPanel";
 import WebhookTestPanel from "@/components/WebhookTestPanel";
-import AdminBatchesPanel from "@/components/AdminBatchesPanel";
 import AdminSurveyTrackingPanel from "@/components/AdminSurveyTrackingPanel";
 import AdminTeacherTimetablesPanel from "@/components/AdminTeacherTimetablesPanel";
 
@@ -94,6 +93,9 @@ const AdminPanel = () => {
   // Teacher assignment
   const [assignTeacherId, setAssignTeacherId] = useState("");
   const [assignCourseId, setAssignCourseId] = useState("");
+  const [assignSection, setAssignSection] = useState("");
+
+  const sections = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
   const PROFILE_COLUMNS = "id,user_id,full_name,email,department,semester,roll_number,father_name,phone,cnic,created_at,gender,city,province,dob,qualification,photo_url,documents";
 
@@ -363,14 +365,14 @@ const AdminPanel = () => {
   };
 
   const handleAssignTeacher = async () => {
-    if (!assignTeacherId || !assignCourseId) { toast.error("Select teacher and course"); return; }
-    const { error } = await (supabase as any).from("teacher_assignments").insert({ teacher_id: assignTeacherId, course_id: assignCourseId });
+    if (!assignTeacherId || !assignCourseId || !assignSection) { toast.error("Select teacher, course, and batch/section"); return; }
+    const { error } = await (supabase as any).from("teacher_assignments").insert({ teacher_id: assignTeacherId, course_id: assignCourseId, section: assignSection });
     if (error) {
-      if (error.message.includes("duplicate")) toast.error("Teacher already assigned to this course");
+      if (error.message.includes("duplicate")) toast.error("Teacher already assigned to this course and batch");
       else toast.error(error.message);
     } else {
       toast.success("Teacher assigned!");
-      setAssignTeacherId(""); setAssignCourseId("");
+      setAssignTeacherId(""); setAssignCourseId(""); setAssignSection("");
       fetchAssignments();
     }
   };
@@ -380,6 +382,56 @@ const AdminPanel = () => {
     toast.success("Assignment removed");
     fetchAssignments();
   };
+
+  const renderCreateUserForm = (title: string, lockedRole?: "student" | "teacher") => (
+    <div id="admin-create-user-form" className="bg-card border border-border rounded-lg p-6 space-y-4">
+      <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+      <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Email *</Label>
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </div>
+        <div className="space-y-2">
+          <Label>Full Name *</Label>
+          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+        </div>
+        <div className="space-y-2">
+          <Label>Father Name</Label>
+          <Input value={fatherName} onChange={(e) => setFatherName(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>Phone Number</Label>
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 03001234567" />
+        </div>
+        <div className="space-y-2">
+          <Label>CNIC Number</Label>
+          <Input value={cnic} onChange={(e) => setCnic(e.target.value)} placeholder="e.g. 35201-1234567-1" />
+        </div>
+        <div className="space-y-2">
+          <Label>Registration Number</Label>
+          <Input value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} placeholder="e.g. 2607-NGCAD-0001" />
+        </div>
+        {!lockedRole && (
+          <div className="space-y-2">
+            <Label>Role</Label>
+            <Select value={userRole} onValueChange={(v) => setUserRole(v as "user" | "student" | "teacher")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">User (Staff)</SelectItem>
+                <SelectItem value="student">Student</SelectItem>
+                <SelectItem value="teacher">Teacher</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <div className="flex items-end">
+          <Button type="submit" disabled={creating} className="w-full">
+            {creating ? "Creating..." : title}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
 
   return (
     <div className="p-6 space-y-6">
@@ -393,8 +445,6 @@ const AdminPanel = () => {
           <TabsTrigger value="students" className="gap-2"><GraduationCap className="h-4 w-4" /> Students</TabsTrigger>
           <TabsTrigger value="teachers" className="gap-2"><Users className="h-4 w-4" /> Teachers</TabsTrigger>
           <TabsTrigger value="courses" className="gap-2"><BookOpen className="h-4 w-4" /> Courses</TabsTrigger>
-          <TabsTrigger value="batches" className="gap-2"><Layers className="h-4 w-4" /> Batches</TabsTrigger>
-          <TabsTrigger value="timetables" className="gap-2"><Calendar className="h-4 w-4" /> Timetables</TabsTrigger>
           <TabsTrigger value="surveys" className="gap-2"><ClipboardList className="h-4 w-4" /> Surveys</TabsTrigger>
           <TabsTrigger value="survey-tracking" className="gap-2"><BarChart3 className="h-4 w-4" /> Survey Tracking</TabsTrigger>
           <TabsTrigger value="complaints" className="gap-2"><MessageSquare className="h-4 w-4" /> Complaints</TabsTrigger>
@@ -417,53 +467,7 @@ const AdminPanel = () => {
             </Button>
           </div>
 
-          {showForm && (
-            <div id="admin-create-user-form" className="bg-card border border-border rounded-lg p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-foreground">Create New User</h3>
-              <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Email *</Label>
-                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Full Name *</Label>
-                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Father Name</Label>
-                  <Input value={fatherName} onChange={(e) => setFatherName(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Phone Number</Label>
-                  <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 03001234567" />
-                </div>
-                <div className="space-y-2">
-                  <Label>CNIC Number</Label>
-                  <Input value={cnic} onChange={(e) => setCnic(e.target.value)} placeholder="e.g. 35201-1234567-1" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Registration Number</Label>
-                  <Input value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} placeholder="e.g. NGCAD-2025-001" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Role</Label>
-                  <Select value={userRole} onValueChange={(v) => setUserRole(v as "user" | "student" | "teacher")}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">User (Staff)</SelectItem>
-                      <SelectItem value="student">Student</SelectItem>
-                      <SelectItem value="teacher">Teacher</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end">
-                  <Button type="submit" disabled={creating} className="w-full">
-                    {creating ? "Creating..." : "Create User"}
-                  </Button>
-                </div>
-              </form>
-            </div>
-          )}
+          {showForm && renderCreateUserForm("Create User")}
 
           {/* Selected User Details */}
           {selectedUser && (
@@ -572,6 +576,9 @@ const AdminPanel = () => {
           )}
 
           <div className="bg-card border border-border rounded-lg overflow-hidden">
+            {showForm && userRole === "student" && (
+              <div className="p-4 border-b border-border">{renderCreateUserForm("Create Student", "student")}</div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -734,9 +741,20 @@ const AdminPanel = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Batch / Section</Label>
+                <Select value={assignSection} onValueChange={setAssignSection}>
+                  <SelectTrigger className="w-40"><SelectValue placeholder="A-Z" /></SelectTrigger>
+                  <SelectContent>
+                    {sections.map((s) => <SelectItem key={s} value={s}>Batch {s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <Button onClick={handleAssignTeacher} size="sm">Assign</Button>
             </div>
           </div>
+
+          {showForm && userRole === "teacher" && renderCreateUserForm("Create Teacher", "teacher")}
 
           {/* Current assignments */}
           <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -745,17 +763,19 @@ const AdminPanel = () => {
                 <tr className="bg-muted">
                   <th className="text-left p-3 font-medium text-muted-foreground">Teacher</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Course</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Batch</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {assignments.length === 0 ? (
-                  <tr><td colSpan={3} className="p-6 text-center text-muted-foreground">No assignments.</td></tr>
+                  <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">No assignments.</td></tr>
                 ) : (
                   assignments.map((a: any) => (
                     <tr key={a.id} className="border-t border-border hover:bg-muted/50">
                       <td className="p-3 text-foreground">{a.teacher_name || "—"}</td>
                       <td className="p-3 text-muted-foreground">{a.courses?.name || "—"}</td>
+                      <td className="p-3 text-muted-foreground">{a.section ? `Batch ${a.section}` : "—"}</td>
                       <td className="p-3">
                         <Button variant="destructive" size="sm" onClick={() => handleRemoveAssignment(a.id)}>Remove</Button>
                       </td>
@@ -765,6 +785,8 @@ const AdminPanel = () => {
               </tbody>
             </table>
           </div>
+
+          <AdminTeacherTimetablesPanel />
 
           {/* Teacher list */}
           <h4 className="font-medium text-foreground mt-4">All Teachers</h4>
@@ -899,14 +921,8 @@ const AdminPanel = () => {
         <TabsContent value="webhook" className="mt-4">
           <WebhookTestPanel />
         </TabsContent>
-        <TabsContent value="batches" className="mt-4">
-          <AdminBatchesPanel />
-        </TabsContent>
         <TabsContent value="survey-tracking" className="mt-4">
           <AdminSurveyTrackingPanel />
-        </TabsContent>
-        <TabsContent value="timetables" className="mt-4">
-          <AdminTeacherTimetablesPanel />
         </TabsContent>
       </Tabs>
     </div>
