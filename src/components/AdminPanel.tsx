@@ -182,7 +182,7 @@ const AdminPanel = () => {
     Promise.all([fetchUsers(), fetchCourses(), fetchTeachers(), fetchStudents(), fetchEnrollments(), fetchAssignments(), fetchBatches()]).then(() => setLoading(false));
   }, []);
 
-  const handleCreateUser = async (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent, forcedRole?: "user" | "student" | "teacher") => {
     e.preventDefault();
     if (!email || !fullName) {
       toast.error("Email and Full Name are required");
@@ -191,7 +191,7 @@ const AdminPanel = () => {
     setCreating(true);
     try {
       const res = await supabase.functions.invoke("create-user", {
-        body: { email, full_name: fullName, roll_number: rollNumber, father_name: fatherName, phone, cnic, role: userRole },
+        body: { email, full_name: fullName, roll_number: rollNumber, father_name: fatherName, phone, cnic, role: forcedRole || userRole },
       });
 
       if (res.error) {
@@ -386,7 +386,7 @@ const AdminPanel = () => {
   const renderCreateUserForm = (title: string, lockedRole?: "student" | "teacher") => (
     <div id="admin-create-user-form" className="bg-card border border-border rounded-lg p-6 space-y-4">
       <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-      <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={(e) => handleCreateUser(e, lockedRole)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Email *</Label>
           <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -505,7 +505,7 @@ const AdminPanel = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {allBatches.filter((b: any) => b.course_id === selectedUserEnrollment.course_id).length === 0 ? (
-                          <div className="p-2 text-xs text-muted-foreground">No active batches for this course. Create one in the Batches tab.</div>
+                          <div className="p-2 text-xs text-muted-foreground">No active batches for this course. Assign teacher batches in the Teachers tab.</div>
                         ) : (
                           allBatches
                             .filter((b: any) => b.course_id === selectedUserEnrollment.course_id)
@@ -576,9 +576,6 @@ const AdminPanel = () => {
           )}
 
           <div className="bg-card border border-border rounded-lg overflow-hidden">
-            {showForm && userRole === "student" && (
-              <div className="p-4 border-b border-border">{renderCreateUserForm("Create Student", "student")}</div>
-            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -646,6 +643,7 @@ const AdminPanel = () => {
               </Button>
             </div>
           </div>
+          {showForm && userRole === "student" && renderCreateUserForm("Create Student", "student")}
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
