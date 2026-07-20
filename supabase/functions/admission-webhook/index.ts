@@ -75,15 +75,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if user already exists by email
+    // Check if user already exists by email; webhook retries should update the existing student instead of failing.
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     const existingUser = existingUsers?.users?.find((u: any) => u.email === email);
-    if (existingUser) {
-      return new Response(JSON.stringify({ error: "User with this email already exists in LMS" }), {
-        status: 409,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const password = generatePassword();
     const { data: regData, error: regErr } = await supabaseAdmin.rpc("next_registration_number");
@@ -96,16 +90,17 @@ Deno.serve(async (req) => {
     const regNumber = regData as string;
     let enrolledCourseId: string | null = null;
 
-    // Create auth user
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name },
-    });
+    const data = existingUser
+      ? { user: existingUser }
+      : (await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name },
+        })).data;
 
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+    if (!data.user) {
+      return new Response(JSON.stringify({ error: "Failed to create student" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -136,13 +131,15 @@ Deno.serve(async (req) => {
         .eq("user_id", data.user.id);
       if (profileErr) console.error("profile update failed", profileErr);
 
-      // Store generated password in vault
-      await supabaseAdmin
-        .from("profile_credentials")
-        .upsert(
-          { user_id: data.user.id, generated_password: password, updated_at: new Date().toISOString() },
-          { onConflict: "user_id" }
-        );
+      if (!existingUser) {
+        // Store generated password in vault only for newly created students.
+        await supabaseAdmin
+          .from("profile_credentials")
+          .upsert(
+            { user_id: data.user.id, generated_password: password, updated_at: new Date().toISOString() },
+            { onConflict: "user_id" }
+          );
+      }
 
       // Set role to student (replace any default role assigned by handle_new_user trigger)
       await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user.id);
@@ -172,17 +169,37 @@ Deno.serve(async (req) => {
 
       if (course) {
         if (course.is_active) {
-          const { data: enrollment, error: enrollErr } = await supabaseAdmin
+          const { data: existingEnrollment } = await supabaseAdmin
             .from("enrollments")
-            .insert({
-              user_id: data.user.id,
-              course_id: course.id,
-              status: "active",
-              challan_paid: true,
-              challan_paid_at: new Date().toISOString(),
-            })
             .select("id")
-            .single();
+            .eq("user_id", data.user.id)
+            .maybeSingle();
+
+          const enrollmentWrite = existingEnrollment
+            ? supabaseAdmin
+                .from("enrollments")
+                .update({
+                  course_id: course.id,
+                  status: "active",
+                  challan_paid: true,
+                  challan_paid_at: new Date().toISOString(),
+                })
+                .eq("id", existingEnrollment.id)
+                .select("id")
+                .single()
+            : supabaseAdmin
+                .from("enrollments")
+                .insert({
+                  user_id: data.user.id,
+                  course_id: course.id,
+                  status: "active",
+                  challan_paid: true,
+                  challan_paid_at: new Date().toISOString(),
+                })
+                .select("id")
+                .single();
+
+          const { data: enrollment, error: enrollErr } = await enrollmentWrite;
 
           if (enrollErr) {
             console.error("Failed to auto-enroll student", enrollErr);
