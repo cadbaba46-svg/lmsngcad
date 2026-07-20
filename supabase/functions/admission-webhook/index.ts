@@ -80,14 +80,28 @@ Deno.serve(async (req) => {
     const existingUser = existingUsers?.users?.find((u: any) => u.email === email);
 
     const password = generatePassword();
-    const { data: regData, error: regErr } = await supabaseAdmin.rpc("next_registration_number");
-    if (regErr || !regData) {
-      return new Response(JSON.stringify({ error: "Failed to generate registration number" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+    let regNumber: string | null = null;
+    if (existingUser) {
+      const { data: existingProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("roll_number")
+        .eq("user_id", existingUser.id)
+        .maybeSingle();
+      regNumber = existingProfile?.roll_number ?? null;
     }
-    const regNumber = regData as string;
+
+    if (!regNumber) {
+      const { data: regData, error: regErr } = await supabaseAdmin.rpc("next_registration_number");
+      if (regErr || !regData) {
+        return new Response(JSON.stringify({ error: "Failed to generate registration number" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      regNumber = regData as string;
+    }
+
     let enrolledCourseId: string | null = null;
 
     const data = existingUser
@@ -126,7 +140,7 @@ Deno.serve(async (req) => {
           photo_url: photo_url || null,
           documents: documents || {},
           roll_number: regNumber,
-          must_change_password: true,
+          must_change_password: existingUser ? undefined : true,
         })
         .eq("user_id", data.user.id);
       if (profileErr) console.error("profile update failed", profileErr);
@@ -218,16 +232,18 @@ Deno.serve(async (req) => {
         console.warn("course not found by id/short_code:", { course_id, course_short_code });
       }
 
-      // Send welcome email with credentials
-      try {
-        await sendTransactionalEmail({
-          templateName: "welcome-credentials",
-          recipientEmail: email,
-          idempotencyKey: `welcome-${data.user.id}`,
-          templateData: { name: full_name, email, password, rollNumber: regNumber },
-        });
-      } catch (e) {
-        console.error("Failed to send welcome email", e);
+      if (!existingUser) {
+        // Send welcome email with credentials only for newly created students.
+        try {
+          await sendTransactionalEmail({
+            templateName: "welcome-credentials",
+            recipientEmail: email,
+            idempotencyKey: `welcome-${data.user.id}`,
+            templateData: { name: full_name, email, password, rollNumber: regNumber },
+          });
+        } catch (e) {
+          console.error("Failed to send welcome email", e);
+        }
       }
     }
 
