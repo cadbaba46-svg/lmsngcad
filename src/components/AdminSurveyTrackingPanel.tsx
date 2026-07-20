@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, ClipboardList, Eye } from "lucide-react";
 import { SURVEY_QUESTIONS, RATING_LEGEND } from "@/lib/surveyQuestions";
+import AdminSurveysPanel from "@/components/AdminSurveysPanel";
 
 interface Row {
   id: string;
@@ -69,6 +70,8 @@ const AdminSurveyTrackingPanel = () => {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold flex items-center gap-2"><ClipboardList className="h-5 w-5" /> Survey Tracking</h3>
+
+      <AdminSurveysPanel />
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
         <Input placeholder="Search student / roll no" value={search} onChange={(e) => setSearch(e.target.value)} />

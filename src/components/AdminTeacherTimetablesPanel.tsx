@@ -6,6 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Trash2, Calendar } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 const SECTIONS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -21,7 +29,7 @@ const AdminTeacherTimetablesPanel = () => {
   const [teacherId, setTeacherId] = useState("");
   const [courseId, setCourseId] = useState("");
   const [section, setSection] = useState<string>("");
-  const [day, setDay] = useState<string>("Monday");
+  const [selectedDays, setSelectedDays] = useState<string[]>(["Monday"]);
   const [start, setStart] = useState("09:00");
   const [end, setEnd] = useState("11:00");
   const [room, setRoom] = useState("");
@@ -43,15 +51,29 @@ const AdminTeacherTimetablesPanel = () => {
   useEffect(() => { load(); }, []);
 
   const add = async () => {
-    if (!teacherId || !courseId || !day || !start || !end) { toast.error("Fill teacher, course, day, and times"); return; }
-    const { error } = await (supabase as any).from("teacher_timetables").insert({
-      teacher_id: teacherId, course_id: courseId, section: section || null, day_of_week: day, start_time: start, end_time: end, room: room || null,
-    });
+    if (!teacherId || !courseId || selectedDays.length === 0 || !start || !end) { toast.error("Fill teacher, course, day(s), and times"); return; }
+    const rows = selectedDays.map((day) => ({
+      teacher_id: teacherId,
+      course_id: courseId,
+      section: section || null,
+      day_of_week: day,
+      start_time: start,
+      end_time: end,
+      room: room || null,
+    }));
+    const { error } = await (supabase as any).from("teacher_timetables").insert(rows);
     if (error) { toast.error(error.message); return; }
-    toast.success("Slot added");
+    toast.success(`${rows.length} slot${rows.length > 1 ? "s" : ""} added`);
     setRoom("");
     load();
   };
+
+  const toggleDay = (value: string) => {
+    setSelectedDays((prev) => prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]);
+  };
+
+  const allDaysSelected = selectedDays.length === DAYS.length;
+  const toggleAllDays = () => setSelectedDays(allDaysSelected ? [] : DAYS);
 
   const remove = async (id: string) => {
     await (supabase as any).from("teacher_timetables").delete().eq("id", id);
@@ -92,11 +114,30 @@ const AdminTeacherTimetablesPanel = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1"><Label className="text-xs">Day</Label>
-            <Select value={day} onValueChange={setDay}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{DAYS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-            </Select>
+          <div className="space-y-1"><Label className="text-xs">Days</Label>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" className="w-full justify-start font-normal">
+                  {selectedDays.length === 0
+                    ? "Select days…"
+                    : allDaysSelected
+                    ? "All days"
+                    : `${selectedDays.length} day${selectedDays.length > 1 ? "s" : ""}`}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 bg-popover">
+                <DropdownMenuLabel>Class Days</DropdownMenuLabel>
+                <DropdownMenuCheckboxItem checked={allDaysSelected} onCheckedChange={toggleAllDays} onSelect={(e) => e.preventDefault()}>
+                  Select all
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                {DAYS.map((d) => (
+                  <DropdownMenuCheckboxItem key={d} checked={selectedDays.includes(d)} onCheckedChange={() => toggleDay(d)} onSelect={(e) => e.preventDefault()}>
+                    {d}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="space-y-1"><Label className="text-xs">Start</Label>
             <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} />

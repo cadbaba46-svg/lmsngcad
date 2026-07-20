@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Trash2, Video, Plus, Check } from "lucide-react";
+import { Trash2, Video, Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -63,10 +63,12 @@ const AdminLecturesPanel = () => {
   const [detecting, setDetecting] = useState(false);
 
   const fetchAll = async () => {
-    const [{ data: lecs }, { data: cs }] = await Promise.all([
+    const [{ data: lecs, error: lectureError }, { data: cs, error: courseError }] = await Promise.all([
       supabase.from("mandatory_lectures" as any).select("*").order("created_at", { ascending: false }),
       supabase.from("courses").select("id, name").eq("is_active", true).order("name"),
     ]);
+    if (lectureError) toast.error(`Lectures failed to load: ${lectureError.message}`);
+    if (courseError) toast.error(`Courses failed to load: ${courseError.message}`);
     setRows((lecs || []) as unknown as Lecture[]);
     setCourses((cs || []) as any);
   };
@@ -78,30 +80,32 @@ const AdminLecturesPanel = () => {
   const allSelected = courses.length > 0 && selectedCourses.length === courses.length;
   const toggleAll = () => setSelectedCourses(allSelected ? [] : courses.map((c) => c.id));
 
+  const parseVideoLinks = (value: string) =>
+    value
+      .split(/[\n,]+/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+
   // Auto-detect video duration
-  const detectDuration = async (url: string, type: string) => {
-    if (!url.trim()) return;
-    setDetecting(true);
-    try {
-      if (type === "url") {
-        await new Promise<void>((resolve) => {
+  const detectDurationSeconds = async (url: string, type: string): Promise<number | null> => {
+    if (!url.trim()) return null;
+    if (type === "url") {
+      return new Promise<number | null>((resolve) => {
           const v = document.createElement("video");
           v.preload = "metadata";
           v.onloadedmetadata = () => {
-            if (isFinite(v.duration) && v.duration > 0) {
-              setDuration(String(Math.round(v.duration)));
-            }
-            resolve();
+            resolve(isFinite(v.duration) && v.duration > 0 ? Math.round(v.duration) : null);
           };
-          v.onerror = () => resolve();
+          v.onerror = () => resolve(null);
           v.src = url;
-          setTimeout(resolve, 8000);
+          setTimeout(() => resolve(null), 8000);
         });
-      } else if (type === "youtube") {
-        // Use YouTube IFrame API to read duration
-        const id = extractYouTubeId(url);
-        if (!id) { toast.message("Could not parse YouTube URL"); return; }
-        await new Promise<void>((resolve) => {
+    }
+    if (type === "youtube") {
+      // Use YouTube IFrame API to read duration
+      const id = extractYouTubeId(url);
+      if (!id) return null;
+      return new Promise<number | null>((resolve) => {
           const container = document.createElement("div");
           container.style.position = "fixed";
           container.style.left = "-9999px";
@@ -112,8 +116,10 @@ const AdminLecturesPanel = () => {
           container.appendChild(target);
           document.body.appendChild(container);
 
-          const cleanup = () => { try { document.body.removeChild(container); } catch {} };
-          const timeout = setTimeout(() => { cleanup(); resolve(); }, 10000);
+        const cleanup = () => {
+          try { document.body.removeChild(container); } catch {}
+        };
+        const timeout = setTimeout(() => { cleanup(); resolve(null); }, 10000);
 
           const loadPlayer = () => {
             const YT = (window as any).YT;
@@ -122,10 +128,9 @@ const AdminLecturesPanel = () => {
               events: {
                 onReady: () => {
                   const d = player.getDuration?.();
-                  if (d && d > 0) setDuration(String(Math.round(d)));
                   clearTimeout(timeout);
                   try { player.destroy?.(); } catch {}
-                  cleanup(); resolve();
+                cleanup(); resolve(d && d > 0 ? Math.round(d) : null);
                 },
               },
             });
@@ -138,7 +143,17 @@ const AdminLecturesPanel = () => {
             document.head.appendChild(s);
           }
         });
-      }
+    }
+    return null;
+  };
+
+  const detectDuration = async (value: string, type: string) => {
+    const first = parseVideoLinks(value)[0];
+    if (!first) return;
+    setDetecting(true);
+    try {
+      const detected = await detectDurationSeconds(first, type);
+      if (detected) setDuration(String(detected));
     } finally {
       setDetecting(false);
     }
@@ -146,26 +161,31 @@ const AdminLecturesPanel = () => {
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !videoUrl.trim()) { toast.error("Title and video URL required"); return; }
+    const links = parseVideoLinks(videoUrl);
+    if (!title.trim() || links.length === 0) { toast.error("Title and at least one video URL required"); return; }
     if (selectedCourses.length === 0) { toast.error("Select at least one course"); return; }
     setSaving(true);
-    const payload = {
-      title: title.trim(),
-      description: description.trim() || null,
-      video_url: videoUrl.trim(),
-      video_type: videoType,
-      duration_seconds: parseInt(duration) || 300,
-      pass_threshold: quizMandatory ? (parseInt(threshold) || 7) : 0,
-      course_ids: selectedCourses,
-      course_id: selectedCourses[0], // legacy NOT NULL column fallback
-      is_quiz_mandatory: quizMandatory,
-      watch_percentage_required: Math.min(100, Math.max(0, parseInt(watchPct) || 80)),
-      is_active: true,
-    };
-    const { error } = await supabase.from("mandatory_lectures" as any).insert(payload);
+    const payloads = [];
+    for (const [index, link] of links.entries()) {
+      const detected = await detectDurationSeconds(link, videoType);
+      payloads.push({
+        title: links.length > 1 ? `${title.trim()} ${index + 1}` : title.trim(),
+        description: description.trim() || null,
+        video_url: link,
+        video_type: videoType,
+        duration_seconds: detected || parseInt(duration) || 300,
+        pass_threshold: quizMandatory ? (parseInt(threshold) || 7) : 0,
+        course_ids: selectedCourses,
+        course_id: selectedCourses[0], // legacy column fallback
+        is_quiz_mandatory: quizMandatory,
+        watch_percentage_required: Math.min(100, Math.max(1, parseInt(watchPct) || 80)),
+        is_active: true,
+      });
+    }
+    const { error } = await supabase.from("mandatory_lectures" as any).insert(payloads);
     setSaving(false);
-    if (error) { console.error("[AdminLecturesPanel] insert failed", error, payload); toast.error(error.message || "Failed to add lecture"); return; }
-    toast.success("Lecture added");
+    if (error) { console.error("[AdminLecturesPanel] insert failed", error, payloads); toast.error(error.message || "Failed to add lecture"); return; }
+    toast.success(`${payloads.length} lecture${payloads.length > 1 ? "s" : ""} added`);
     setTitle(""); setVideoUrl(""); setDescription(""); setDuration("300"); setThreshold("7");
     setSelectedCourses([]); setQuizMandatory(true); setWatchPct("80");
     setShow(false);
@@ -212,19 +232,20 @@ const AdminLecturesPanel = () => {
               </Select>
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>Video URL *</Label>
-              <Input
+              <Label>Video URLs *</Label>
+              <Textarea
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
                 onBlur={(e) => detectDuration(e.target.value, videoType)}
-                placeholder="https://youtu.be/... or https://.../video.mp4"
+                placeholder="Paste one video link per line"
+                rows={5}
                 required
               />
             </div>
             <div className="space-y-2">
               <Label>Duration (seconds) {detecting && <span className="text-xs text-muted-foreground">— detecting…</span>}</Label>
-              <Input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} min={30} />
-              <p className="text-xs text-muted-foreground">Auto-detected for direct video URLs.</p>
+              <Input type="number" value={duration} readOnly min={30} className="bg-muted/40" />
+              <p className="text-xs text-muted-foreground">Auto-calculated from the first link before save; each uploaded link is calculated during saving.</p>
             </div>
             <div className="space-y-2">
               <Label>Required Watch %</Label>
@@ -280,7 +301,7 @@ const AdminLecturesPanel = () => {
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={6} disabled={!quizMandatory} placeholder="Paste transcript, key topics, summary, or learning objectives — the AI uses this to generate accurate MCQs." />
             </div>
           </div>
-          <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save Lecture"}</Button>
+          <Button type="submit" disabled={saving}>{saving ? "Calculating & saving…" : "Save Lecture(s)"}</Button>
         </form>
       )}
 
