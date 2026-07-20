@@ -149,4 +149,14 @@
     color: hsl(var(--nav-fg));
     text-decoration: underline;
   }
+
+  .sonner-ok-button svg {
+    display: none;
+  }
+
+  .sonner-ok-button::after {
+    content: "OK";
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
 }
