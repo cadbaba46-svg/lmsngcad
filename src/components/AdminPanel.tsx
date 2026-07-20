@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video, Webhook, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import AdminSurveysPanel from "@/components/AdminSurveysPanel";
 import CredentialVaultPanel from "@/components/CredentialVaultPanel";
 import AdminComplaintsPanel from "@/components/AdminComplaintsPanel";
 import AdminLecturesPanel from "@/components/AdminLecturesPanel";
@@ -445,7 +444,6 @@ const AdminPanel = () => {
           <TabsTrigger value="students" className="gap-2"><GraduationCap className="h-4 w-4" /> Students</TabsTrigger>
           <TabsTrigger value="teachers" className="gap-2"><Users className="h-4 w-4" /> Teachers</TabsTrigger>
           <TabsTrigger value="courses" className="gap-2"><BookOpen className="h-4 w-4" /> Courses</TabsTrigger>
-          <TabsTrigger value="surveys" className="gap-2"><ClipboardList className="h-4 w-4" /> Surveys</TabsTrigger>
           <TabsTrigger value="survey-tracking" className="gap-2"><BarChart3 className="h-4 w-4" /> Survey Tracking</TabsTrigger>
           <TabsTrigger value="complaints" className="gap-2"><MessageSquare className="h-4 w-4" /> Complaints</TabsTrigger>
           <TabsTrigger value="lectures" className="gap-2"><Video className="h-4 w-4" /> Lectures</TabsTrigger>
@@ -903,9 +901,6 @@ const AdminPanel = () => {
               </div>
             ))}
           </div>
-        </TabsContent>
-        <TabsContent value="surveys" className="space-y-4 mt-4">
-          <AdminSurveysPanel />
         </TabsContent>
         <TabsContent value="complaints" className="space-y-4 mt-4">
           <AdminComplaintsPanel />
