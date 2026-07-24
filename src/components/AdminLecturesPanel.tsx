@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,22 @@ interface Lecture {
 
 interface Course { id: string; name: string; }
 
+interface LectureEntry {
+  id: string;
+  title: string;
+  videoUrl: string;
+  duration: string;
+  detecting: boolean;
+}
+
+const createLectureEntry = (): LectureEntry => ({
+  id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+  title: "",
+  videoUrl: "",
+  duration: "",
+  detecting: false,
+});
+
 const extractYouTubeId = (url: string): string | null => {
   try {
     const u = new URL(url);
@@ -50,17 +66,15 @@ const AdminLecturesPanel = () => {
   const [rows, setRows] = useState<Lecture[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [show, setShow] = useState(false);
-  const [title, setTitle] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
+  const [entries, setEntries] = useState<LectureEntry[]>([createLectureEntry()]);
   const [videoType, setVideoType] = useState("youtube");
   const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState("300");
   const [threshold, setThreshold] = useState("7");
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [quizMandatory, setQuizMandatory] = useState(true);
   const [watchPct, setWatchPct] = useState("80");
   const [saving, setSaving] = useState(false);
-  const [detecting, setDetecting] = useState(false);
+  const detecting = useMemo(() => entries.some((entry) => entry.detecting), [entries]);
 
   const fetchAll = async () => {
     const [{ data: lecs, error: lectureError }, { data: cs, error: courseError }] = await Promise.all([
@@ -80,11 +94,38 @@ const AdminLecturesPanel = () => {
   const allSelected = courses.length > 0 && selectedCourses.length === courses.length;
   const toggleAll = () => setSelectedCourses(allSelected ? [] : courses.map((c) => c.id));
 
-  const parseVideoLinks = (value: string) =>
-    value
+  const updateEntry = (id: string, patch: Partial<LectureEntry>) => {
+    setEntries((prev) => prev.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
+  };
+
+  const addEntry = () => setEntries((prev) => [...prev, createLectureEntry()]);
+
+  const removeEntry = (id: string) => {
+    setEntries((prev) => (prev.length === 1 ? prev : prev.filter((entry) => entry.id !== id)));
+  };
+
+  const addPastedLinks = (value: string, targetId: string) => {
+    const links = value
       .split(/[\n,]+/)
       .map((x) => x.trim())
       .filter(Boolean);
+
+    if (links.length <= 1) {
+      updateEntry(targetId, { videoUrl: value });
+      return;
+    }
+
+    setEntries((prev) => {
+      const target = prev.find((entry) => entry.id === targetId);
+      const targetTitle = target?.title.trim() || "";
+      const replacement = links.map((link, index) => ({
+        ...createLectureEntry(),
+        title: targetTitle && links.length > 1 ? `${targetTitle} ${index + 1}` : targetTitle,
+        videoUrl: link,
+      }));
+      return prev.flatMap((entry) => (entry.id === targetId ? replacement : [entry]));
+    });
+  };
 
   // Auto-detect video duration
   const detectDurationSeconds = async (url: string, type: string): Promise<number | null> => {
@@ -147,33 +188,38 @@ const AdminLecturesPanel = () => {
     return null;
   };
 
-  const detectDuration = async (value: string, type: string) => {
-    const first = parseVideoLinks(value)[0];
-    if (!first) return;
-    setDetecting(true);
+  const detectDuration = async (entryId: string, value: string, type: string) => {
+    const link = value.trim();
+    if (!link) return;
+    updateEntry(entryId, { detecting: true });
     try {
-      const detected = await detectDurationSeconds(first, type);
-      if (detected) setDuration(String(detected));
+      const detected = await detectDurationSeconds(link, type);
+      if (detected) updateEntry(entryId, { duration: String(detected) });
     } finally {
-      setDetecting(false);
+      updateEntry(entryId, { detecting: false });
     }
   };
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
-    const links = parseVideoLinks(videoUrl);
-    if (!title.trim() || links.length === 0) { toast.error("Title and at least one video URL required"); return; }
+    const readyEntries = entries
+      .map((entry) => ({ ...entry, title: entry.title.trim(), videoUrl: entry.videoUrl.trim() }))
+      .filter((entry) => entry.title || entry.videoUrl);
+    if (readyEntries.length === 0 || readyEntries.some((entry) => !entry.title || !entry.videoUrl)) {
+      toast.error("Each lecture needs its own title and video URL");
+      return;
+    }
     if (selectedCourses.length === 0) { toast.error("Select at least one course"); return; }
     setSaving(true);
     const payloads = [];
-    for (const [index, link] of links.entries()) {
-      const detected = await detectDurationSeconds(link, videoType);
+    for (const entry of readyEntries) {
+      const detected = await detectDurationSeconds(entry.videoUrl, videoType);
       payloads.push({
-        title: links.length > 1 ? `${title.trim()} ${index + 1}` : title.trim(),
+        title: entry.title,
         description: description.trim() || null,
-        video_url: link,
+        video_url: entry.videoUrl,
         video_type: videoType,
-        duration_seconds: detected || parseInt(duration) || 300,
+        duration_seconds: detected || parseInt(entry.duration) || 300,
         pass_threshold: quizMandatory ? (parseInt(threshold) || 7) : 0,
         course_ids: selectedCourses,
         course_id: selectedCourses[0], // legacy column fallback
@@ -186,7 +232,7 @@ const AdminLecturesPanel = () => {
     setSaving(false);
     if (error) { console.error("[AdminLecturesPanel] insert failed", error, payloads); toast.error(error.message || "Failed to add lecture"); return; }
     toast.success(`${payloads.length} lecture${payloads.length > 1 ? "s" : ""} added`);
-    setTitle(""); setVideoUrl(""); setDescription(""); setDuration("300"); setThreshold("7");
+    setEntries([createLectureEntry()]); setDescription(""); setThreshold("7");
     setSelectedCourses([]); setQuizMandatory(true); setWatchPct("80");
     setShow(false);
     fetchAll();
@@ -218,10 +264,6 @@ const AdminLecturesPanel = () => {
         <form onSubmit={add} className="bg-card border border-border rounded-lg p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Title *</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
               <Label>Video Type</Label>
               <Select value={videoType} onValueChange={setVideoType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -231,21 +273,51 @@ const AdminLecturesPanel = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Video URLs *</Label>
-              <Textarea
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                onBlur={(e) => detectDuration(e.target.value, videoType)}
-                placeholder="Paste one video link per line"
-                rows={5}
-                required
-              />
+            <div className="space-y-3 md:col-span-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label>Lectures *</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addEntry} className="gap-2">
+                  <Plus className="h-4 w-4" /> Add another
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {entries.map((entry, index) => (
+                  <div key={entry.id} className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-semibold text-foreground">Lecture {index + 1}</div>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeEntry(entry.id)} disabled={entries.length === 1} className="text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.4fr_10rem] gap-3">
+                      <div className="space-y-2">
+                        <Label>Lecture Name *</Label>
+                        <Input value={entry.title} onChange={(e) => updateEntry(entry.id, { title: e.target.value })} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Video URL *</Label>
+                        <Input
+                          value={entry.videoUrl}
+                          onChange={(e) => addPastedLinks(e.target.value, entry.id)}
+                          onBlur={(e) => detectDuration(entry.id, e.target.value, videoType)}
+                          placeholder="Paste video link"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Duration {entry.detecting && <span className="text-xs text-muted-foreground">…</span>}</Label>
+                        <Input type="number" value={entry.duration || "300"} readOnly min={30} className="bg-muted/40" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Paste multiple links into one Video URL box to split them into separate lecture rows, then set each lecture name.</p>
             </div>
             <div className="space-y-2">
-              <Label>Duration (seconds) {detecting && <span className="text-xs text-muted-foreground">— detecting…</span>}</Label>
-              <Input type="number" value={duration} readOnly min={30} className="bg-muted/40" />
-              <p className="text-xs text-muted-foreground">Auto-calculated from the first link before save; each uploaded link is calculated during saving.</p>
+              <Label>Duration status {detecting && <span className="text-xs text-muted-foreground">— detecting…</span>}</Label>
+              <Input value="Auto-calculated per lecture" readOnly className="bg-muted/40" />
+              <p className="text-xs text-muted-foreground">Each lecture duration is calculated from its own video link during save.</p>
             </div>
             <div className="space-y-2">
               <Label>Required Watch %</Label>
