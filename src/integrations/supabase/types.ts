@@ -1047,6 +1047,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      choose_student_instructor: {
+        Args: { _enrollment_id: string; _section?: string; _teacher_id: string }
+        Returns: undefined
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1062,6 +1066,20 @@ export type Database = {
         Returns: {
           full_name: string
           user_id: string
+        }[]
+      }
+      get_student_timetable_options: {
+        Args: never
+        Returns: {
+          course_id: string
+          course_name: string
+          enrollment_id: string
+          section: string
+          selected_section: string
+          selected_teacher_id: string
+          slots: Json
+          teacher_id: string
+          teacher_name: string
         }[]
       }
       get_teacher_students: {
