@@ -1101,6 +1101,26 @@ export type Database = {
           read_ct: number
         }[]
       }
+      student_can_view_batch: {
+        Args: { _batch_id: string; _student_id: string }
+        Returns: boolean
+      }
+      teacher_can_access_enrollment: {
+        Args: { _enrollment_id: string; _teacher_id: string }
+        Returns: boolean
+      }
+      teacher_has_course_access: {
+        Args: {
+          _course_id: string
+          _course_ids?: string[]
+          _teacher_id: string
+        }
+        Returns: boolean
+      }
+      user_has_active_enrollment_for_course: {
+        Args: { _course_id: string; _course_ids?: string[]; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "student" | "teacher"
