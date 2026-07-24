@@ -1047,6 +1047,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      choose_student_instructor: {
+        Args: { _enrollment_id: string; _section?: string; _teacher_id: string }
+        Returns: undefined
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1062,6 +1066,20 @@ export type Database = {
         Returns: {
           full_name: string
           user_id: string
+        }[]
+      }
+      get_student_timetable_options: {
+        Args: never
+        Returns: {
+          course_id: string
+          course_name: string
+          enrollment_id: string
+          section: string
+          selected_section: string
+          selected_teacher_id: string
+          slots: Json
+          teacher_id: string
+          teacher_name: string
         }[]
       }
       get_teacher_students: {
@@ -1100,6 +1118,26 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      student_can_view_batch: {
+        Args: { _batch_id: string; _student_id: string }
+        Returns: boolean
+      }
+      teacher_can_access_enrollment: {
+        Args: { _enrollment_id: string; _teacher_id: string }
+        Returns: boolean
+      }
+      teacher_has_course_access: {
+        Args: {
+          _course_id: string
+          _course_ids?: string[]
+          _teacher_id: string
+        }
+        Returns: boolean
+      }
+      user_has_active_enrollment_for_course: {
+        Args: { _course_id: string; _course_ids?: string[]; _user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
