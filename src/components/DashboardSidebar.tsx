@@ -5,6 +5,18 @@ interface SidebarSection {
   items: { label: string; id: string }[];
 }
 
+export const ADMIN_SECTIONS: { label: string; id: string }[] = [
+  { label: "Users", id: "admin-users" },
+  { label: "Students", id: "admin-students" },
+  { label: "Teachers", id: "admin-teachers" },
+  { label: "Courses", id: "admin-courses" },
+  { label: "Survey Tracking", id: "admin-survey-tracking" },
+  { label: "Complaints", id: "admin-complaints" },
+  { label: "Lectures", id: "admin-lectures" },
+  { label: "Vault", id: "admin-vault" },
+  { label: "Webhook", id: "admin-webhook" },
+];
+
 const studentSections: SidebarSection[] = [
   {
     title: "Academic Calendar",
@@ -81,9 +93,38 @@ interface DashboardSidebarProps {
   isAdmin?: boolean;
   isTeacher?: boolean;
   profileLabel?: string;
+  isStaff?: boolean;
+  allowedAdminSections?: string[];
 }
 
-const DashboardSidebar = ({ activeItem, onItemClick, isAdmin, isTeacher, profileLabel }: DashboardSidebarProps) => {
+const DashboardSidebar = ({ activeItem, onItemClick, isAdmin, isTeacher, profileLabel, isStaff, allowedAdminSections }: DashboardSidebarProps) => {
+  // Admins and staff get ONLY the admin sections vertically (no student sidebar).
+  if (isAdmin || isStaff) {
+    const items = isAdmin
+      ? ADMIN_SECTIONS
+      : ADMIN_SECTIONS.filter((s) => (allowedAdminSections || []).includes(s.id));
+    return (
+      <aside className="lms-sidebar w-60 min-h-screen overflow-y-auto flex-shrink-0">
+        <div className="py-4">
+          <div className="mb-2">
+            <div className="lms-sidebar-section px-4 py-2">Administration</div>
+            {items.length === 0 ? (
+              <div className="px-4 py-2 text-xs text-muted-foreground/70">No sections assigned.</div>
+            ) : items.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => onItemClick(item.id)}
+                className={cn("lms-sidebar-item", activeItem === item.id && "active")}
+              >
+                {item.label}
+              </div>
+            ))}
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
   const baseSections = isTeacher ? teacherSections : studentSections;
   const sections = profileLabel
     ? baseSections.map((s) => ({
@@ -97,17 +138,6 @@ const DashboardSidebar = ({ activeItem, onItemClick, isAdmin, isTeacher, profile
   return (
     <aside className="lms-sidebar w-60 min-h-screen overflow-y-auto flex-shrink-0">
       <div className="py-4">
-        {isAdmin && (
-          <div className="mb-2">
-            <div className="lms-sidebar-section px-4 py-2">Administration</div>
-            <div
-              onClick={() => onItemClick("admin-panel")}
-              className={cn("lms-sidebar-item", activeItem === "admin-panel" && "active")}
-            >
-              Admin Control Panel
-            </div>
-          </div>
-        )}
         {sections.map((section) => (
           <div key={section.title} className="mb-2">
             <div className="lms-sidebar-section px-4 py-2">{section.title}</div>
