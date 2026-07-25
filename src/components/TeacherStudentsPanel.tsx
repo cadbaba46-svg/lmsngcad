@@ -85,9 +85,11 @@ const TeacherStudentsPanel = () => {
               {students.map((s) => {
                 const arr = Array.isArray(s.attendance) ? s.attendance : [];
                 const present = arr.filter((a: any) => a?.status === "present").length;
+                const late = arr.filter((a: any) => a?.status === "late").length;
+                const attended = present + late * 0.5;
                 const marked = arr.length;
-                const running = marked > 0 ? Math.round((present / marked) * 100) : 0;
-                const total = s.total_weeks > 0 ? Math.round((present / s.total_weeks) * 100) : 0;
+                const running = marked > 0 ? Math.round((attended / marked) * 100) : 0;
+                const total = s.total_weeks > 0 ? Math.round((attended / s.total_weeks) * 100) : 0;
                 return (
                 <tr key={s.id} className="border-t border-border hover:bg-muted/50">
                   <td className="p-3 text-foreground">{s.student_name || "—"}</td>

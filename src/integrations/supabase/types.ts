@@ -640,10 +640,12 @@ export type Database = {
       }
       profiles: {
         Row: {
+          allowed_admin_sections: string[]
           avatar_url: string | null
           city: string | null
           cnic: string | null
           created_at: string
+          custom_role_title: string | null
           department: string | null
           dob: string | null
           documents: Json
@@ -665,10 +667,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          allowed_admin_sections?: string[]
           avatar_url?: string | null
           city?: string | null
           cnic?: string | null
           created_at?: string
+          custom_role_title?: string | null
           department?: string | null
           dob?: string | null
           documents?: Json
@@ -690,10 +694,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          allowed_admin_sections?: string[]
           avatar_url?: string | null
           city?: string | null
           cnic?: string | null
           created_at?: string
+          custom_role_title?: string | null
           department?: string | null
           dob?: string | null
           documents?: Json

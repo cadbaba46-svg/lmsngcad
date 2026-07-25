@@ -46,7 +46,13 @@ interface Course {
   short_code?: string | null;
 }
 
-const AdminPanel = () => {
+interface AdminPanelProps {
+  activeTab?: string;
+  allowedTabs?: string[];
+  onTabChange?: (t: string) => void;
+}
+
+const AdminPanel = ({ activeTab, allowedTabs, onTabChange }: AdminPanelProps = {}) => {
   const [users, setUsers] = useState<Profile[]>([]);
   const [students, setStudents] = useState<Profile[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -74,6 +80,20 @@ const AdminPanel = () => {
   const [phone, setPhone] = useState("");
   const [cnic, setCnic] = useState("");
   const [userRole, setUserRole] = useState<"user" | "student" | "teacher">("student");
+  const [customRoleTitle, setCustomRoleTitle] = useState("");
+  const [staffPermissions, setStaffPermissions] = useState<string[]>([]);
+
+  const STAFF_SECTIONS: { id: string; label: string }[] = [
+    { id: "admin-users", label: "Users" },
+    { id: "admin-students", label: "Students" },
+    { id: "admin-teachers", label: "Teachers" },
+    { id: "admin-courses", label: "Courses" },
+    { id: "admin-survey-tracking", label: "Survey Tracking" },
+    { id: "admin-complaints", label: "Complaints" },
+    { id: "admin-lectures", label: "Lectures" },
+    { id: "admin-vault", label: "Vault" },
+    { id: "admin-webhook", label: "Webhook" },
+  ];
 
   // Course edit
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -196,8 +216,21 @@ const AdminPanel = () => {
       if (res.error) {
         toast.error(res.error.message || "Failed to create user");
       } else {
+        // If we created a staff user, persist the custom role title + allowed sections
+        const createdRole = forcedRole || userRole;
+        const createdUserId = (res.data as any)?.user?.id;
+        if (createdRole === "user" && createdUserId) {
+          await (supabase as any)
+            .from("profiles")
+            .update({
+              custom_role_title: customRoleTitle || null,
+              allowed_admin_sections: staffPermissions,
+            })
+            .eq("user_id", createdUserId);
+        }
         toast.success("User created successfully. Credentials are available only in the vault.");
         setEmail(""); setFullName(""); setFatherName(""); setRollNumber(""); setPhone(""); setCnic(""); setUserRole("student");
+        setCustomRoleTitle(""); setStaffPermissions([]);
         setShowForm(false);
         fetchUsers();
         fetchStudents();
@@ -416,12 +449,44 @@ const AdminPanel = () => {
             <Select value={userRole} onValueChange={(v) => setUserRole(v as "user" | "student" | "teacher")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">User (Staff)</SelectItem>
+                <SelectItem value="user">Staff Member</SelectItem>
                 <SelectItem value="student">Student</SelectItem>
                 <SelectItem value="teacher">Teacher</SelectItem>
               </SelectContent>
             </Select>
           </div>
+        )}
+        {(!lockedRole && userRole === "user") && (
+          <>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Custom Role Title</Label>
+              <Input
+                value={customRoleTitle}
+                onChange={(e) => setCustomRoleTitle(e.target.value)}
+                placeholder="e.g. Accounts Officer, Registrar, Coordinator"
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Admin Panel Access (only selected sections will show on their LMS)</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 border border-border rounded-md bg-background">
+                {STAFF_SECTIONS.map((s) => (
+                  <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={staffPermissions.includes(s.id)}
+                      onChange={(e) => {
+                        setStaffPermissions((prev) =>
+                          e.target.checked ? [...prev, s.id] : prev.filter((p) => p !== s.id)
+                        );
+                      }}
+                    />
+                    <span className="text-foreground">{s.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </>
         )}
         <div className="flex items-end">
           <Button type="submit" disabled={creating} className="w-full">
@@ -438,18 +503,20 @@ const AdminPanel = () => {
         <Users className="h-6 w-6" /> Admin Control Panel
       </h2>
 
-      <Tabs defaultValue="users">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="users" className="gap-2"><UserPlus className="h-4 w-4" /> Users</TabsTrigger>
-          <TabsTrigger value="students" className="gap-2"><GraduationCap className="h-4 w-4" /> Students</TabsTrigger>
-          <TabsTrigger value="teachers" className="gap-2"><Users className="h-4 w-4" /> Teachers</TabsTrigger>
-          <TabsTrigger value="courses" className="gap-2"><BookOpen className="h-4 w-4" /> Courses</TabsTrigger>
-          <TabsTrigger value="survey-tracking" className="gap-2"><BarChart3 className="h-4 w-4" /> Survey Tracking</TabsTrigger>
-          <TabsTrigger value="complaints" className="gap-2"><MessageSquare className="h-4 w-4" /> Complaints</TabsTrigger>
-          <TabsTrigger value="lectures" className="gap-2"><Video className="h-4 w-4" /> Lectures</TabsTrigger>
-          <TabsTrigger value="vault" className="gap-2"><KeyRound className="h-4 w-4" /> Vault</TabsTrigger>
-          <TabsTrigger value="webhook" className="gap-2"><Webhook className="h-4 w-4" /> Webhook</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab || "users"} onValueChange={(v) => onTabChange?.(v)}>
+        {!activeTab && (
+          <TabsList className="flex-wrap">
+            {(!allowedTabs || allowedTabs.includes("users")) && <TabsTrigger value="users" className="gap-2"><UserPlus className="h-4 w-4" /> Users</TabsTrigger>}
+            {(!allowedTabs || allowedTabs.includes("students")) && <TabsTrigger value="students" className="gap-2"><GraduationCap className="h-4 w-4" /> Students</TabsTrigger>}
+            {(!allowedTabs || allowedTabs.includes("teachers")) && <TabsTrigger value="teachers" className="gap-2"><Users className="h-4 w-4" /> Teachers</TabsTrigger>}
+            {(!allowedTabs || allowedTabs.includes("courses")) && <TabsTrigger value="courses" className="gap-2"><BookOpen className="h-4 w-4" /> Courses</TabsTrigger>}
+            {(!allowedTabs || allowedTabs.includes("survey-tracking")) && <TabsTrigger value="survey-tracking" className="gap-2"><BarChart3 className="h-4 w-4" /> Survey Tracking</TabsTrigger>}
+            {(!allowedTabs || allowedTabs.includes("complaints")) && <TabsTrigger value="complaints" className="gap-2"><MessageSquare className="h-4 w-4" /> Complaints</TabsTrigger>}
+            {(!allowedTabs || allowedTabs.includes("lectures")) && <TabsTrigger value="lectures" className="gap-2"><Video className="h-4 w-4" /> Lectures</TabsTrigger>}
+            {(!allowedTabs || allowedTabs.includes("vault")) && <TabsTrigger value="vault" className="gap-2"><KeyRound className="h-4 w-4" /> Vault</TabsTrigger>}
+            {(!allowedTabs || allowedTabs.includes("webhook")) && <TabsTrigger value="webhook" className="gap-2"><Webhook className="h-4 w-4" /> Webhook</TabsTrigger>}
+          </TabsList>
+        )}
 
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4 mt-4">
