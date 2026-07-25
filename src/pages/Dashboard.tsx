@@ -7,6 +7,7 @@ import OfferedSubjectsPanel from "@/components/OfferedSubjectsPanel";
 import CurrentCoursesPanel from "@/components/CurrentCoursesPanel";
 import StudentProfilePanel from "@/components/StudentProfilePanel";
 import AdminPanel from "@/components/AdminPanel";
+import { ADMIN_SECTIONS } from "@/components/DashboardSidebar";
 import TeacherCoursesPanel from "@/components/TeacherCoursesPanel";
 import TeacherStudentsPanel from "@/components/TeacherStudentsPanel";
 import TeacherAttendancePanel from "@/components/TeacherAttendancePanel";
@@ -36,6 +37,8 @@ const Dashboard = () => {
   const [studentFullName, setStudentFullName] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [isTeacher, setIsTeacher] = useState(false);
+  const [isStaff, setIsStaff] = useState(false);
+  const [allowedAdminSections, setAllowedAdminSections] = useState<string[]>([]);
   const [history, setHistory] = useState<string[]>(["offered-subjects"]);
   const [pendingLecture, setPendingLecture] = useState<any>(null);
   const [lectureChecked, setLectureChecked] = useState(false);
@@ -62,15 +65,26 @@ const Dashboard = () => {
         const roles = (data || []).map((r) => r.role as string);
         const admin = roles.includes("admin");
         const teacher = roles.includes("teacher");
+        const staff = !admin && !teacher && roles.includes("user");
         setIsAdmin(admin);
         setIsTeacher(teacher);
+        setIsStaff(staff);
 
         if (admin) {
-          setActiveItem("admin-panel");
-          setHistory(["admin-panel"]);
+          setActiveItem("admin-users");
+          setHistory(["admin-users"]);
         } else if (teacher) {
           setActiveItem("teacher-courses");
           setHistory(["teacher-courses"]);
+        } else if (staff) {
+          // Load allowed admin sections from profile
+          supabase.from("profiles").select("allowed_admin_sections").eq("user_id", user.id).maybeSingle().then(({ data: p }) => {
+            const allowed = ((p as any)?.allowed_admin_sections || []) as string[];
+            setAllowedAdminSections(allowed);
+            const first = allowed[0] || "admin-users";
+            setActiveItem(first);
+            setHistory([first]);
+          });
         }
       });
     }
@@ -128,9 +142,15 @@ const Dashboard = () => {
   };
 
   const renderContent = () => {
+    if ((isAdmin || isStaff) && activeItem.startsWith("admin-")) {
+      const tab = activeItem.slice("admin-".length);
+      const allowed = isAdmin ? ADMIN_SECTIONS.map((s) => s.id.slice(6)) : allowedAdminSections.map((id) => id.slice(6));
+      if (!allowed.includes(tab)) {
+        return <div className="p-6 text-muted-foreground">You do not have access to this section.</div>;
+      }
+      return <AdminPanel activeTab={tab} allowedTabs={allowed} onTabChange={(t) => handleItemClick(`admin-${t}`)} />;
+    }
     switch (activeItem) {
-      case "admin-panel":
-        return isAdmin ? <AdminPanel /> : null;
       case "offered-subjects":
         return <OfferedSubjectsPanel />;
       case "current-courses":
@@ -209,6 +229,8 @@ const Dashboard = () => {
             onItemClick={handleItemClick}
             isAdmin={isAdmin}
             isTeacher={isTeacher}
+            isStaff={isStaff}
+            allowedAdminSections={allowedAdminSections}
             profileLabel={studentFullName || undefined}
           />
         </div>
