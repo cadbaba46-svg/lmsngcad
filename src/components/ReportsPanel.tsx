@@ -83,6 +83,8 @@ const ReportsPanel = () => {
       const rows: AttendanceRow[] = filtered.map((e: any) => {
         const arr = Array.isArray(e.attendance) ? e.attendance : [];
         const present = arr.filter((a: any) => a?.status === "present").length;
+        const late = arr.filter((a: any) => a?.status === "late").length;
+        const attended = present + late * 0.5;
         const marked = arr.length;
         const weeks = e.courses?.total_weeks || 0;
         const sessions = [...arr]
@@ -94,8 +96,8 @@ const ReportsPanel = () => {
           attended: marked,
           present,
           marked,
-          runningPercent: marked > 0 ? Math.round((present / marked) * 100) : 0,
-          percent: weeks > 0 ? Math.round((present / weeks) * 100) : 0,
+          runningPercent: marked > 0 ? Math.round((attended / marked) * 100) : 0,
+          percent: weeks > 0 ? Math.round((attended / weeks) * 100) : 0,
           sessions,
         };
       });

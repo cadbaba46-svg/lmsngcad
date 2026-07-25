@@ -117,10 +117,12 @@ const CurrentCoursesPanel = () => {
           const course = enrollment.courses;
           const attendanceArr = Array.isArray(enrollment.attendance) ? enrollment.attendance : [];
           const presentCount = attendanceArr.filter((a: any) => a?.status === "present").length;
+          const lateCount = attendanceArr.filter((a: any) => a?.status === "late").length;
+          const attended = presentCount + lateCount * 0.5;
           const markedCount = attendanceArr.length;
-          const runningPercent = markedCount > 0 ? Math.round((presentCount / markedCount) * 100) : 0;
+          const runningPercent = markedCount > 0 ? Math.round((attended / markedCount) * 100) : 0;
           const totalPercent = course.total_weeks > 0
-            ? Math.round((presentCount / course.total_weeks) * 100)
+            ? Math.round((attended / course.total_weeks) * 100)
             : 0;
 
           return (

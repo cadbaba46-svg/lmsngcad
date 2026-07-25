@@ -84,8 +84,10 @@ const CourseTrackPanel = () => {
           {current && (() => {
             const att = Array.isArray(current.attendance) ? current.attendance : [];
             const present = att.filter((a: any) => a?.status === "present").length;
+            const late = att.filter((a: any) => a?.status === "late").length;
+            const attended = present + late * 0.5;
             const total = current.courses?.total_weeks || 0;
-            const attPct = total > 0 ? (present / total) * 100 : 0;
+            const attPct = total > 0 ? (attended / total) * 100 : 0;
             const has = (m?: number | null) => m != null;
             const items = [
               { label: "Attendance ≥ 75%", done: attPct >= 75 },

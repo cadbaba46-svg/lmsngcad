@@ -90,10 +90,12 @@ const TeacherAttendancePanel = () => {
 
       const existingAttendance = Array.isArray(student.attendance) ? student.attendance : [];
       const totalWeeks = student.courses?.total_weeks || 0;
-      const otherPresents = existingAttendance.filter(
-        (a: any) => a.date !== dateStr && a.status === "present"
-      ).length;
-      if (status === "present" && totalWeeks > 0 && otherPresents >= totalWeeks) {
+      const others = existingAttendance.filter((a: any) => a.date !== dateStr);
+      const otherAttended =
+        others.filter((a: any) => a.status === "present").length +
+        others.filter((a: any) => a.status === "late").length * 0.5;
+      const add = status === "present" ? 1 : status === "late" ? 0.5 : 0;
+      if (totalWeeks > 0 && otherAttended + add > totalWeeks) {
         toast.error(
           `${student.profile?.full_name || "Student"}: attendance already reached the requirement (${totalWeeks}/${totalWeeks}). Cannot mark another "Present".`
         );
@@ -118,18 +120,30 @@ const TeacherAttendancePanel = () => {
   const calcPercents = (s: any) => {
     const arr = Array.isArray(s.attendance) ? s.attendance : [];
     const present = arr.filter((a: any) => a.status === "present").length;
+    const late = arr.filter((a: any) => a.status === "late").length;
+    // 2 lates = 1 absent → each late counts as half a present
+    const attended = present + late * 0.5;
     const markedTotal = arr.length;
     const totalWeeks = s.courses?.total_weeks || 0;
+    const round = (n: number) => Math.round(n * 10) / 10;
     return {
-      running: markedTotal > 0 ? Math.round((present / markedTotal) * 100) : 0,
-      overall: totalWeeks > 0 ? Math.round((present / totalWeeks) * 100) : 0,
+      running: markedTotal > 0 ? round((attended / markedTotal) * 100) : 0,
+      overall: totalWeeks > 0 ? round((attended / totalWeeks) * 100) : 0,
       present,
+      late,
+      attended: Math.round(attended * 10) / 10,
       markedTotal,
       totalWeeks,
     };
   };
 
   if (loading && courses.length === 0) return <div className="p-6 flex items-center justify-center min-h-[300px]"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+
+  const totalMarkedForDate = students.filter((s) => {
+    const arr = Array.isArray(s.attendance) ? s.attendance : [];
+    return arr.some((a: any) => a.date === selectedDate);
+  }).length;
+  const pendingForDate = students.length - totalMarkedForDate;
 
   return (
     <div className="p-6 space-y-6">
@@ -172,6 +186,21 @@ const TeacherAttendancePanel = () => {
             <p className="text-muted-foreground">No students enrolled in this course.</p>
           ) : (
             <>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-card border border-border rounded-lg p-3">
+                  <div className="text-xs text-muted-foreground">Total Students</div>
+                  <div className="text-lg font-bold text-foreground">{students.length}</div>
+                </div>
+                <div className="bg-card border border-border rounded-lg p-3">
+                  <div className="text-xs text-muted-foreground">Marked ({selectedDate})</div>
+                  <div className="text-lg font-bold text-primary">{totalMarkedForDate}</div>
+                </div>
+                <div className="bg-card border border-border rounded-lg p-3">
+                  <div className="text-xs text-muted-foreground">Pending</div>
+                  <div className="text-lg font-bold text-destructive">{pendingForDate}</div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Note: 2 lates count as 1 absent (each late = 0.5 present).</p>
               <div className="bg-card border border-border rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
