@@ -61,7 +61,7 @@ const CurrentCoursesPanel = () => {
       const courseIds = Array.from(new Set(list.map((e) => e.course_id)));
       const fallbackByCourse: Record<string, string> = {};
       let fallbackTeacherIds: string[] = [];
-      if (courseIds.length > 0 && selectedTeacherIds.length === 0) {
+      if (courseIds.length > 0) {
         const { data: assigns } = await (supabase as any)
           .from("teacher_assignments")
           .select("course_id, teacher_id")

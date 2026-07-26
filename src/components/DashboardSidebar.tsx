@@ -104,7 +104,7 @@ const DashboardSidebar = ({ activeItem, onItemClick, isAdmin, isTeacher, profile
       ? ADMIN_SECTIONS
       : ADMIN_SECTIONS.filter((s) => (allowedAdminSections || []).includes(s.id));
     return (
-      <aside className="lms-sidebar w-60 min-h-screen overflow-y-auto flex-shrink-0">
+      <aside className="lms-sidebar w-44 min-h-screen overflow-y-auto flex-shrink-0">
         <div className="py-4">
           <div className="mb-2">
             <div className="lms-sidebar-section px-4 py-2">Administration</div>
@@ -136,7 +136,7 @@ const DashboardSidebar = ({ activeItem, onItemClick, isAdmin, isTeacher, profile
     : baseSections;
 
   return (
-    <aside className="lms-sidebar w-60 min-h-screen overflow-y-auto flex-shrink-0">
+    <aside className="lms-sidebar w-44 min-h-screen overflow-y-auto flex-shrink-0">
       <div className="py-4">
         {sections.map((section) => (
           <div key={section.title} className="mb-2">
