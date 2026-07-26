@@ -269,7 +269,7 @@ const AttendanceTable = ({ rows }: { rows: AttendanceRow[] }) => {
         <TableHeader>
           <TableRow>
             <TableHead>Course</TableHead>
-            <TableHead className="text-right">Present</TableHead>
+            <TableHead className="text-right">Weighted Present</TableHead>
             <TableHead className="text-right">Marked</TableHead>
             <TableHead className="text-right">Total Weeks</TableHead>
             <TableHead className="text-right">Running %</TableHead>
@@ -280,7 +280,7 @@ const AttendanceTable = ({ rows }: { rows: AttendanceRow[] }) => {
           {rows.map((r) => (
             <TableRow key={r.course}>
               <TableCell className="font-medium">{r.course}</TableCell>
-              <TableCell className="text-right">{r.present}</TableCell>
+              <TableCell className="text-right">{r.attended}</TableCell>
               <TableCell className="text-right">{r.marked}</TableCell>
               <TableCell className="text-right">{r.weeks}</TableCell>
               <TableCell className="text-right">{r.runningPercent}%</TableCell>
