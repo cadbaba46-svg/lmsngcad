@@ -86,8 +86,8 @@ const ReportsPanel = () => {
         const stats = getAttendanceStats(e.attendance, weeks);
         const arr = stats.entries;
         const sessions = [...arr]
-          .filter((a: any) => a?.date)
-          .sort((a: any, b: any) => (a.date < b.date ? -1 : 1));
+          .filter((a): a is { date: string; status: string } => Boolean(a?.date && a?.status))
+          .sort((a, b) => (a.date < b.date ? -1 : 1));
         return {
           course: e.courses?.name || "Unknown",
           weeks,
