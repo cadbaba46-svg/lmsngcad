@@ -221,8 +221,8 @@ const Dashboard = () => {
 
       <div className="flex flex-1">
         <div className="flex flex-col">
-          <div className="lms-sidebar flex items-center justify-center py-4 px-4">
-            <img src={ngcadLogo} alt="Next Gen Cad Academy" className="h-20 w-20 object-contain" />
+          <div className="lms-sidebar flex items-center justify-center py-3 px-3">
+            <img src={ngcadLogo} alt="Next Gen Cad Academy" className="h-16 w-16 object-contain" />
           </div>
           <DashboardSidebar
             activeItem={activeItem}

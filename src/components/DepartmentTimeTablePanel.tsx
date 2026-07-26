@@ -38,7 +38,19 @@ const DepartmentTimeTablePanel = () => {
       setLoading(false);
       return;
     }
-    const rows = ((data || []) as TimetableOption[]).map((row) => ({ ...row, slots: row.slots || [] }));
+    const rawRows = ((data || []) as TimetableOption[]).map((row) => ({ ...row, slots: row.slots || [] }));
+    const hasSectionByTeacher = new Set(
+      rawRows.filter((row) => row.section).map((row) => `${row.enrollment_id}-${row.teacher_id}`)
+    );
+    const rows = rawRows
+      .filter((row) => row.section || !hasSectionByTeacher.has(`${row.enrollment_id}-${row.teacher_id}`))
+      .filter((row, index, arr) =>
+        index === arr.findIndex((candidate) =>
+          candidate.enrollment_id === row.enrollment_id &&
+          candidate.teacher_id === row.teacher_id &&
+          (candidate.section || "") === (row.section || "")
+        )
+      );
     setOptions(rows);
     setCourseCount(new Set(rows.map((row) => row.enrollment_id)).size);
     setLoading(false);

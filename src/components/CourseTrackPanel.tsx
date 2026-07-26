@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, TrendingUp, CheckCircle2, Circle } from "lucide-react";
+import { getAttendanceStats } from "@/lib/attendance";
 
 interface Enrollment {
   id: string;
@@ -82,15 +83,10 @@ const CourseTrackPanel = () => {
           </div>
 
           {current && (() => {
-            const att = Array.isArray(current.attendance) ? current.attendance : [];
-            const present = att.filter((a: any) => a?.status === "present").length;
-            const late = att.filter((a: any) => a?.status === "late").length;
-            const attended = present + late * 0.5;
-            const total = current.courses?.total_weeks || 0;
-            const attPct = total > 0 ? (attended / total) * 100 : 0;
+            const attendance = getAttendanceStats(current.attendance, current.courses?.total_weeks || 0);
             const has = (m?: number | null) => m != null;
             const items = [
-              { label: "Attendance ≥ 75%", done: attPct >= 75 },
+              { label: "Attendance ≥ 75%", done: attendance.totalPercent >= 75 },
               { label: "Mid Assessment", done: has(evalRow?.mid_marks) },
               { label: "Final Assessment", done: has(evalRow?.final_marks) },
               { label: "Open Ended Lab (OEL)", done: has(evalRow?.oel_marks) },

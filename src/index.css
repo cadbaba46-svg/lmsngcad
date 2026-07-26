@@ -92,6 +92,12 @@
 }
 
 @layer base {
+  #root {
+    max-width: 640px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
   * {
     @apply border-border;
   }
@@ -115,13 +121,13 @@
   .lms-sidebar-section {
     color: hsl(var(--sidebar-section));
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   .lms-sidebar-item {
-    @apply px-4 py-2 text-sm cursor-pointer transition-colors duration-150;
+    @apply px-3 py-1.5 text-xs cursor-pointer transition-colors duration-150;
     color: hsl(var(--sidebar-fg) / 0.8);
   }
 

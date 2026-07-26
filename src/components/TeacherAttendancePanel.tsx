@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Loader2, CheckCircle, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatAttendanceCount, getAttendanceStats } from "@/lib/attendance";
 
 const TeacherAttendancePanel = () => {
   const { user } = useAuth();
@@ -90,7 +91,14 @@ const TeacherAttendancePanel = () => {
 
       const existingAttendance = Array.isArray(student.attendance) ? student.attendance : [];
       const totalWeeks = student.courses?.total_weeks || 0;
+      const isUpdatingExistingDate = existingAttendance.some((a: any) => a.date === dateStr);
       const others = existingAttendance.filter((a: any) => a.date !== dateStr);
+      if (!isUpdatingExistingDate && totalWeeks > 0 && others.length >= totalWeeks) {
+        toast.error(
+          `${student.profile?.full_name || "Student"}: total attendance records already reached ${totalWeeks}/${totalWeeks}. Cannot add another date.`
+        );
+        continue;
+      }
       const otherAttended =
         others.filter((a: any) => a.status === "present").length +
         others.filter((a: any) => a.status === "late").length * 0.5;
@@ -118,23 +126,7 @@ const TeacherAttendancePanel = () => {
   };
 
   const calcPercents = (s: any) => {
-    const arr = Array.isArray(s.attendance) ? s.attendance : [];
-    const present = arr.filter((a: any) => a.status === "present").length;
-    const late = arr.filter((a: any) => a.status === "late").length;
-    // 2 lates = 1 absent → each late counts as half a present
-    const attended = present + late * 0.5;
-    const markedTotal = arr.length;
-    const totalWeeks = s.courses?.total_weeks || 0;
-    const round = (n: number) => Math.round(n * 10) / 10;
-    return {
-      running: markedTotal > 0 ? round((attended / markedTotal) * 100) : 0,
-      overall: totalWeeks > 0 ? round((attended / totalWeeks) * 100) : 0,
-      present,
-      late,
-      attended: Math.round(attended * 10) / 10,
-      markedTotal,
-      totalWeeks,
-    };
+    return getAttendanceStats(s.attendance, s.courses?.total_weeks || 0);
   };
 
   if (loading && courses.length === 0) return <div className="p-6 flex items-center justify-center min-h-[300px]"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
@@ -222,12 +214,12 @@ const TeacherAttendancePanel = () => {
                         <td className="p-3 text-foreground">{s.profile?.full_name || "—"}</td>
                         <td className="p-3 text-muted-foreground">{s.profile?.roll_number || "—"}</td>
                         <td className="p-3 text-foreground">
-                          <span className="font-semibold">{p.running}%</span>
-                          <span className="text-xs text-muted-foreground ml-1">({p.present}/{p.markedTotal})</span>
+                          <span className="font-semibold">{p.runningPercent}%</span>
+                          <span className="text-xs text-muted-foreground ml-1">({formatAttendanceCount(p.attended)}/{p.marked})</span>
                         </td>
                         <td className="p-3 text-foreground">
-                          <span className="font-semibold">{p.overall}%</span>
-                          <span className="text-xs text-muted-foreground ml-1">({p.present}/{p.totalWeeks})</span>
+                          <span className="font-semibold">{p.totalPercent}%</span>
+                          <span className="text-xs text-muted-foreground ml-1">({formatAttendanceCount(p.attended)}/{p.totalWeeks})</span>
                         </td>
                         <td className="p-3">
                           <Select
