@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import StudentTeacherChat from "@/components/StudentTeacherChat";
+import { formatAttendanceCount, getAttendanceStats } from "@/lib/attendance";
 
 interface Enrollment {
   id: string;
@@ -16,6 +17,8 @@ interface Enrollment {
   challan_paid_at: string | null;
   attendance: any[];
   course_roll_number?: string | null;
+  selected_teacher_id?: string | null;
+  selected_section?: string | null;
   courses: {
     id: string;
     name: string;
@@ -40,7 +43,7 @@ const CurrentCoursesPanel = () => {
   const { user } = useAuth();
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [teachersByCourse, setTeachersByCourse] = useState<Record<string, { id: string; full_name: string | null }>>({});
+  const [teachersByEnrollment, setTeachersByEnrollment] = useState<Record<string, { id: string; full_name: string | null }>>({});
   const [chatFor, setChatFor] = useState<{ courseId: string; teacherId: string; teacherName: string; courseName: string } | null>(null);
 
   useEffect(() => {
@@ -54,37 +57,44 @@ const CurrentCoursesPanel = () => {
       const list = (data || []) as unknown as Enrollment[];
       setEnrollments(list);
 
+      const selectedTeacherIds = Array.from(new Set(list.map((e) => e.selected_teacher_id).filter(Boolean))) as string[];
       const courseIds = Array.from(new Set(list.map((e) => e.course_id)));
-      if (courseIds.length > 0) {
+      const fallbackByCourse: Record<string, string> = {};
+      let fallbackTeacherIds: string[] = [];
+      if (courseIds.length > 0 && selectedTeacherIds.length === 0) {
         const { data: assigns } = await (supabase as any)
           .from("teacher_assignments")
           .select("course_id, teacher_id")
           .in("course_id", courseIds);
-        const teacherIds = Array.from(new Set((assigns || []).map((a: any) => a.teacher_id)));
-        let nameById: Record<string, string | null> = {};
-        if (teacherIds.length > 0) {
-          const { data: tProfiles } = await (supabase as any).rpc("get_public_teacher_profiles", {
-            _teacher_ids: teacherIds,
-          });
-          if (Array.isArray(tProfiles)) {
-            nameById = Object.fromEntries(tProfiles.map((p: any) => [p.user_id, p.full_name]));
-          } else {
-            // Fallback if RPC missing: try profiles direct (may be blocked by RLS)
-            const { data: p2 } = await (supabase as any)
-              .from("profiles")
-              .select("user_id, full_name")
-              .in("user_id", teacherIds);
-            nameById = Object.fromEntries((p2 || []).map((p: any) => [p.user_id, p.full_name]));
-          }
-        }
-        const map: Record<string, { id: string; full_name: string | null }> = {};
         (assigns || []).forEach((a: any) => {
-          if (!map[a.course_id]) {
-            map[a.course_id] = { id: a.teacher_id, full_name: nameById[a.teacher_id] ?? null };
+          if (!fallbackByCourse[a.course_id]) {
+            fallbackByCourse[a.course_id] = a.teacher_id;
           }
         });
-        setTeachersByCourse(map);
+        fallbackTeacherIds = Object.values(fallbackByCourse);
       }
+      const teacherIds = Array.from(new Set([...selectedTeacherIds, ...fallbackTeacherIds]));
+      let nameById: Record<string, string | null> = {};
+      if (teacherIds.length > 0) {
+        const { data: tProfiles } = await (supabase as any).rpc("get_public_teacher_profiles", {
+          _teacher_ids: teacherIds,
+        });
+        if (Array.isArray(tProfiles)) {
+          nameById = Object.fromEntries(tProfiles.map((p: any) => [p.user_id, p.full_name]));
+        } else {
+          const { data: p2 } = await (supabase as any)
+            .from("profiles")
+            .select("user_id, full_name")
+            .in("user_id", teacherIds);
+          nameById = Object.fromEntries((p2 || []).map((p: any) => [p.user_id, p.full_name]));
+        }
+      }
+      const teacherMap: Record<string, { id: string; full_name: string | null }> = {};
+      list.forEach((enrollment) => {
+        const teacherId = enrollment.selected_teacher_id || fallbackByCourse[enrollment.course_id];
+        if (teacherId) teacherMap[enrollment.id] = { id: teacherId, full_name: nameById[teacherId] ?? null };
+      });
+      setTeachersByEnrollment(teacherMap);
       setLoading(false);
     };
     fetch();
@@ -115,15 +125,7 @@ const CurrentCoursesPanel = () => {
       <div className="grid gap-4">
         {enrollments.map((enrollment) => {
           const course = enrollment.courses;
-          const attendanceArr = Array.isArray(enrollment.attendance) ? enrollment.attendance : [];
-          const presentCount = attendanceArr.filter((a: any) => a?.status === "present").length;
-          const lateCount = attendanceArr.filter((a: any) => a?.status === "late").length;
-          const attended = presentCount + lateCount * 0.5;
-          const markedCount = attendanceArr.length;
-          const runningPercent = markedCount > 0 ? Math.round((attended / markedCount) * 100) : 0;
-          const totalPercent = course.total_weeks > 0
-            ? Math.round((attended / course.total_weeks) * 100)
-            : 0;
+          const attendance = getAttendanceStats(enrollment.attendance, course.total_weeks);
 
           return (
             <div
@@ -167,11 +169,11 @@ const CurrentCoursesPanel = () => {
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Attendance</p>
                   <div className="flex items-center gap-2">
-                    <Progress value={totalPercent} className="flex-1 h-2" />
-                    <span className="text-xs font-medium text-foreground">{presentCount}/{course.total_weeks}</span>
+                    <Progress value={attendance.totalPercent} className="flex-1 h-2" />
+                    <span className="text-xs font-medium text-foreground">{formatAttendanceCount(attendance.attended)}/{course.total_weeks}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Running: <span className="font-semibold text-foreground">{runningPercent}%</span> ({presentCount}/{markedCount}) · Total: <span className="font-semibold text-foreground">{totalPercent}%</span>
+                    Running: <span className="font-semibold text-foreground">{attendance.runningPercent}%</span> ({formatAttendanceCount(attendance.attended)}/{attendance.marked}) · Total: <span className="font-semibold text-foreground">{attendance.totalPercent}%</span>
                   </p>
                 </div>
               </div>
@@ -193,7 +195,7 @@ const CurrentCoursesPanel = () => {
 
               {/* Instructor + Contact */}
               {enrollment.challan_paid && (() => {
-                const teacher = teachersByCourse[course.id];
+                const teacher = teachersByEnrollment[enrollment.id];
                 return (
                   <div className="border-t border-border pt-3 flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2 text-sm">

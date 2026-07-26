@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Users } from "lucide-react";
+import { formatAttendanceCount, getAttendanceStats } from "@/lib/attendance";
 
 const TeacherStudentsPanel = () => {
   const { user } = useAuth();
@@ -83,20 +84,14 @@ const TeacherStudentsPanel = () => {
             </thead>
             <tbody>
               {students.map((s) => {
-                const arr = Array.isArray(s.attendance) ? s.attendance : [];
-                const present = arr.filter((a: any) => a?.status === "present").length;
-                const late = arr.filter((a: any) => a?.status === "late").length;
-                const attended = present + late * 0.5;
-                const marked = arr.length;
-                const running = marked > 0 ? Math.round((attended / marked) * 100) : 0;
-                const total = s.total_weeks > 0 ? Math.round((attended / s.total_weeks) * 100) : 0;
+                const attendance = getAttendanceStats(s.attendance, s.total_weeks);
                 return (
                 <tr key={s.id} className="border-t border-border hover:bg-muted/50">
                   <td className="p-3 text-foreground">{s.student_name || "—"}</td>
                   <td className="p-3 text-muted-foreground">{s.roll_number || "—"}</td>
                   <td className="p-3 text-muted-foreground">{s.course_name || "—"}</td>
-                  <td className="p-3 text-foreground"><span className="font-semibold">{running}%</span> <span className="text-xs text-muted-foreground">({present}/{marked})</span></td>
-                  <td className="p-3 text-foreground"><span className="font-semibold">{total}%</span> <span className="text-xs text-muted-foreground">({present}/{s.total_weeks})</span></td>
+                  <td className="p-3 text-foreground"><span className="font-semibold">{attendance.runningPercent}%</span> <span className="text-xs text-muted-foreground">({formatAttendanceCount(attendance.attended)}/{attendance.marked})</span></td>
+                  <td className="p-3 text-foreground"><span className="font-semibold">{attendance.totalPercent}%</span> <span className="text-xs text-muted-foreground">({formatAttendanceCount(attendance.attended)}/{s.total_weeks})</span></td>
                   <td className="p-3">
                     {s.challan_paid ? (
                       <span className="text-green-600 font-medium">Paid</span>

@@ -2,12 +2,17 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, CheckCircle2, Circle, Award } from "lucide-react";
+import { Loader2, CheckCircle2, Circle, Award, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { formatAttendanceCount, getAttendanceStats } from "@/lib/attendance";
 
 interface Enrollment {
   id: string;
   course_id: string;
+  status: string;
+  challan_paid: boolean;
+  course_roll_number: string | null;
   attendance: any[];
   courses: { id: string; name: string; total_weeks: number };
 }
@@ -45,10 +50,12 @@ const ViewDMCPanel = () => {
       setLoading(true);
       const { data } = await supabase
         .from("enrollments")
-        .select("id, course_id, attendance, courses(id, name, total_weeks)")
+        .select("id, course_id, status, challan_paid, course_roll_number, attendance, courses(id, name, total_weeks)")
         .eq("user_id", user.id)
-        .eq("challan_paid", true);
-      const list = (data || []) as unknown as Enrollment[];
+        .in("status", ["active", "completed"]);
+      const list = ((data || []) as unknown as Enrollment[]).sort((a, b) =>
+        a.status === b.status ? (a.courses?.name || "").localeCompare(b.courses?.name || "") : a.status === "active" ? -1 : 1
+      );
       setEnrolls(list);
       if (list.length && !selected) setSelected(list[0].id);
       setLoading(false);
@@ -112,11 +119,26 @@ const ViewDMCPanel = () => {
             </Select>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {enrolls.map((enrollment) => (
+              <Button
+                key={enrollment.id}
+                type="button"
+                variant={selected === enrollment.id ? "default" : "outline"}
+                className="h-auto justify-start gap-3 p-3 text-left"
+                onClick={() => setSelected(enrollment.id)}
+              >
+                <BookOpen className="h-4 w-4 flex-shrink-0" />
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{enrollment.courses?.name || "—"}</span>
+                  <span className="block text-xs opacity-80">{enrollment.status === "completed" ? "Completed" : "Currently enrolled"}</span>
+                </span>
+              </Button>
+            ))}
+          </div>
+
           {current && (() => {
-            const att = Array.isArray(current.attendance) ? current.attendance : [];
-            const present = att.filter((a: any) => a?.status === "present").length;
-            const totalWeeks = current.courses?.total_weeks || 0;
-            const attPct = totalWeeks > 0 ? Math.round((present / totalWeeks) * 100) : 0;
+            const attendance = getAttendanceStats(current.attendance, current.courses?.total_weeks || 0);
             const has = (m?: number | null) => m != null;
             // Final % aggregates marked components against their totals.
             const components = [
@@ -135,6 +157,10 @@ const ViewDMCPanel = () => {
                   <div>
                     <h3 className="text-lg font-semibold text-foreground">{current.courses?.name}</h3>
                     <p className="text-xs text-muted-foreground">
+                      Status: <span className="font-medium text-foreground">{current.status === "completed" ? "Completed" : "Currently enrolled"}</span>
+                      {current.course_roll_number ? ` · Roll No: ${current.course_roll_number}` : ""}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
                       Blue tick = requirement met. Marks are entered by your teacher; only your final percentage is shown.
                     </p>
                   </div>
@@ -143,7 +169,11 @@ const ViewDMCPanel = () => {
                     <p className="text-2xl font-bold text-primary">{finalPct}%</p>
                   </div>
                 </div>
-                <Item label="Attendance (≥ 75%)" met={attPct >= 75} detail={`Current: ${attPct}%`} />
+                <Item
+                  label="Attendance (≥ 75%)"
+                  met={attendance.totalPercent >= 75}
+                  detail={`Weighted: ${formatAttendanceCount(attendance.attended)}/${attendance.totalWeeks} · Running: ${attendance.runningPercent}% · Total: ${attendance.totalPercent}% · Present ${attendance.present}, Late ${attendance.late}, Absent ${attendance.absent}`}
+                />
                 <Item label="Mid Assessment" met={has(evalRow?.mid_marks)} />
                 <Item label="Final Assessment" met={has(evalRow?.final_marks)} />
                 <Item label="Open Ended Lab (OEL)" met={has(evalRow?.oel_marks)} />

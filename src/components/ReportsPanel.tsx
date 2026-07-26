@@ -24,6 +24,7 @@ import { FileBarChart, Download, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
+import { getAttendanceStats } from "@/lib/attendance";
 
 type ReportType = "attendance" | "survey";
 
@@ -81,23 +82,20 @@ const ReportsPanel = () => {
       setCourseOptions(opts);
       const filtered = (data || []).filter((e: any) => courseFilter === "all" || e.course_id === courseFilter);
       const rows: AttendanceRow[] = filtered.map((e: any) => {
-        const arr = Array.isArray(e.attendance) ? e.attendance : [];
-        const present = arr.filter((a: any) => a?.status === "present").length;
-        const late = arr.filter((a: any) => a?.status === "late").length;
-        const attended = present + late * 0.5;
-        const marked = arr.length;
         const weeks = e.courses?.total_weeks || 0;
+        const stats = getAttendanceStats(e.attendance, weeks);
+        const arr = stats.entries;
         const sessions = [...arr]
           .filter((a: any) => a?.date)
           .sort((a: any, b: any) => (a.date < b.date ? -1 : 1));
         return {
           course: e.courses?.name || "Unknown",
           weeks,
-          attended: marked,
-          present,
-          marked,
-          runningPercent: marked > 0 ? Math.round((attended / marked) * 100) : 0,
-          percent: weeks > 0 ? Math.round((attended / weeks) * 100) : 0,
+          attended: stats.attended,
+          present: stats.present,
+          marked: stats.marked,
+          runningPercent: stats.runningPercent,
+          percent: stats.totalPercent,
           sessions,
         };
       });
