@@ -187,6 +187,51 @@ export type Database = {
         }
         Relationships: []
       }
+      course_content_selections: {
+        Row: {
+          content_key: string
+          content_title: string
+          course_id: string
+          enrollment_id: string
+          id: string
+          selected_at: string
+          user_id: string
+        }
+        Insert: {
+          content_key: string
+          content_title: string
+          course_id: string
+          enrollment_id: string
+          id?: string
+          selected_at?: string
+          user_id: string
+        }
+        Update: {
+          content_key?: string
+          content_title?: string
+          course_id?: string
+          enrollment_id?: string
+          id?: string
+          selected_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_content_selections_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_content_selections_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_evaluations: {
         Row: {
           cep_marks: number | null
@@ -1053,6 +1098,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_student_teacher_message: {
+        Args: { _course_id: string; _student_id: string; _teacher_id: string }
+        Returns: boolean
+      }
       choose_student_instructor: {
         Args: { _enrollment_id: string; _section?: string; _teacher_id: string }
         Returns: undefined

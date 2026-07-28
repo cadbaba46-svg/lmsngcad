@@ -25,6 +25,7 @@ const studentSections: SidebarSection[] = [
       { label: "Department TimeTable", id: "dept-timetable" },
       { label: "Current Courses", id: "current-courses" },
       { label: "Student TimeTable", id: "student-timetable" },
+      { label: "Elective Course Selection", id: "elective-selection" },
       { label: "Start Secure Exam Browser", id: "exam-browser" },
     ],
   },
@@ -61,7 +62,6 @@ const studentSections: SidebarSection[] = [
       { label: "Surveys For Subjects", id: "surveys-subjects" },
       { label: "Exit Survey", id: "exit-survey" },
       { label: "University Survey", id: "university-survey" },
-      { label: "Elective Course Selection", id: "elective-selection" },
     ],
   },
   {
