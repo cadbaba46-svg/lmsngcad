@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video, Webhook, BarChart3 } from "lucide-react";
+import { UserPlus, Users, BookOpen, Settings, GraduationCap, Trash2, X, Eye, ClipboardList, KeyRound, MessageSquare, Video, Webhook, BarChart3, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import CredentialVaultPanel from "@/components/CredentialVaultPanel";
@@ -13,6 +13,7 @@ import AdminLecturesPanel from "@/components/AdminLecturesPanel";
 import WebhookTestPanel from "@/components/WebhookTestPanel";
 import AdminSurveyTrackingPanel from "@/components/AdminSurveyTrackingPanel";
 import AdminTeacherTimetablesPanel from "@/components/AdminTeacherTimetablesPanel";
+import { createCourseContentItem, courseContentKindLabel, emptyCourseContentConfig, parseCourseContent, serializeCourseContent, type CourseContentConfig, type CourseContentKind, type CourseContentRequirement } from "@/lib/courseContent";
 
 interface Profile {
   id: string;
@@ -41,7 +42,7 @@ interface Course {
   price: number;
   description: string | null;
   total_weeks: number;
-  course_content: string[];
+  course_content: unknown;
   is_active: boolean;
   short_code?: string | null;
 }
@@ -98,7 +99,7 @@ const AdminPanel = ({ activeTab, allowedTabs, onTabChange }: AdminPanelProps = {
   // Course edit
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [courseWeeks, setCourseWeeks] = useState("");
-  const [courseContent, setCourseContent] = useState("");
+  const [courseContentConfig, setCourseContentConfig] = useState<CourseContentConfig>(emptyCourseContentConfig());
   const [coursePrice, setCoursePrice] = useState("");
   const [courseShortCode, setCourseShortCode] = useState("");
   const [showAddCourse, setShowAddCourse] = useState(false);
@@ -106,7 +107,7 @@ const AdminPanel = ({ activeTab, allowedTabs, onTabChange }: AdminPanelProps = {
   const [newCoursePrice, setNewCoursePrice] = useState("");
   const [newCourseDesc, setNewCourseDesc] = useState("");
   const [newCourseWeeks, setNewCourseWeeks] = useState("12");
-  const [newCourseContent, setNewCourseContent] = useState("");
+  const [newCourseContentConfig, setNewCourseContentConfig] = useState<CourseContentConfig>(emptyCourseContentConfig());
   const [newCourseShortCode, setNewCourseShortCode] = useState("");
 
   // Teacher assignment
@@ -357,7 +358,7 @@ const AdminPanel = ({ activeTab, allowedTabs, onTabChange }: AdminPanelProps = {
   const handleEditCourse = (course: Course) => {
     setEditingCourse(course);
     setCourseWeeks(String(course.total_weeks));
-    setCourseContent((course.course_content || []).join("\n"));
+    setCourseContentConfig(parseCourseContent(course.course_content));
     setCoursePrice(String(course.price));
     setCourseShortCode(course.short_code || "");
   };
@@ -368,7 +369,7 @@ const AdminPanel = ({ activeTab, allowedTabs, onTabChange }: AdminPanelProps = {
       .from("courses")
       .update({
         total_weeks: parseInt(courseWeeks) || 12,
-        course_content: courseContent.split("\n").filter(Boolean),
+        course_content: serializeCourseContent(courseContentConfig),
         price: parseFloat(coursePrice) || 0,
         short_code: courseShortCode.trim().toUpperCase() || null,
       } as any)
@@ -384,14 +385,14 @@ const AdminPanel = ({ activeTab, allowedTabs, onTabChange }: AdminPanelProps = {
       price: parseFloat(newCoursePrice) || 0,
       description: newCourseDesc,
       total_weeks: parseInt(newCourseWeeks) || 12,
-      course_content: newCourseContent.split("\n").filter(Boolean),
+      course_content: serializeCourseContent(newCourseContentConfig),
       short_code: newCourseShortCode.trim().toUpperCase() || null,
     } as any);
     if (error) toast.error(error.message);
     else {
       toast.success("Course added!");
       setShowAddCourse(false);
-      setNewCourseName(""); setNewCoursePrice(""); setNewCourseDesc(""); setNewCourseWeeks("12"); setNewCourseContent(""); setNewCourseShortCode("");
+      setNewCourseName(""); setNewCoursePrice(""); setNewCourseDesc(""); setNewCourseWeeks("12"); setNewCourseContentConfig(emptyCourseContentConfig()); setNewCourseShortCode("");
       fetchCourses();
     }
   };
@@ -413,6 +414,96 @@ const AdminPanel = ({ activeTab, allowedTabs, onTabChange }: AdminPanelProps = {
     await (supabase as any).from("teacher_assignments").delete().eq("id", id);
     toast.success("Assignment removed");
     fetchAssignments();
+  };
+
+  const renderCourseContentEditor = (
+    config: CourseContentConfig,
+    setConfig: (updater: (prev: CourseContentConfig) => CourseContentConfig) => void
+  ) => {
+    const electiveCount = config.items.filter((item) => item.requirement === "elective").length;
+    const requiredCount = Math.min(config.elective_required_count, electiveCount);
+
+    return (
+      <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+          <div className="space-y-2">
+            <Label>Mandatory elective selections</Label>
+            <Input
+              type="number"
+              min={0}
+              max={electiveCount}
+              value={requiredCount}
+              onChange={(e) => setConfig((prev) => ({ ...prev, elective_required_count: Math.max(0, Number(e.target.value || 0)) }))}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setConfig((prev) => ({ ...prev, items: [...prev.items, createCourseContentItem()] }))}
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" /> Add syllabus/topic/software
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          {config.items.length === 0 ? (
+            <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
+              No course content added yet.
+            </div>
+          ) : (
+            config.items.map((item) => (
+              <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_150px_150px_auto] gap-2 rounded-md border border-border p-3">
+                <Input
+                  value={item.title}
+                  onChange={(e) => setConfig((prev) => ({
+                    ...prev,
+                    items: prev.items.map((row) => row.id === item.id ? { ...row, title: e.target.value } : row),
+                  }))}
+                  placeholder="e.g. AutoCAD basics, Revit, safety drawing standards"
+                />
+                <Select
+                  value={item.kind}
+                  onValueChange={(value) => setConfig((prev) => ({
+                    ...prev,
+                    items: prev.items.map((row) => row.id === item.id ? { ...row, kind: value as CourseContentKind } : row),
+                  }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="syllabus">Syllabus</SelectItem>
+                    <SelectItem value="topic">Topic</SelectItem>
+                    <SelectItem value="content">Content</SelectItem>
+                    <SelectItem value="software">Software</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={item.requirement}
+                  onValueChange={(value) => setConfig((prev) => ({
+                    ...prev,
+                    items: prev.items.map((row) => row.id === item.id ? { ...row, requirement: value as CourseContentRequirement } : row),
+                  }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="compulsory">Compulsory</SelectItem>
+                    <SelectItem value="elective">Elective</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfig((prev) => ({ ...prev, items: prev.items.filter((row) => row.id !== item.id) }))}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
   };
 
   const renderCreateUserForm = (title: string, lockedRole?: "student" | "teacher") => (
@@ -912,8 +1003,8 @@ const AdminPanel = ({ activeTab, allowedTabs, onTabChange }: AdminPanelProps = {
                   <Input type="number" value={newCourseWeeks} onChange={(e) => setNewCourseWeeks(e.target.value)} />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Course Content (one item per line)</Label>
-                  <textarea className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground min-h-[100px]" value={newCourseContent} onChange={(e) => setNewCourseContent(e.target.value)} />
+                  <Label>Course syllabus / topics / content / software</Label>
+                  {renderCourseContentEditor(newCourseContentConfig, setNewCourseContentConfig)}
                 </div>
                 <div><Button type="submit">Add Course</Button></div>
               </form>
@@ -939,8 +1030,8 @@ const AdminPanel = ({ activeTab, allowedTabs, onTabChange }: AdminPanelProps = {
                   <Input value={courseShortCode} onChange={(e) => setCourseShortCode(e.target.value)} placeholder="e.g. ACAD" />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Course Content (one item per line)</Label>
-                  <textarea className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground min-h-[120px]" value={courseContent} onChange={(e) => setCourseContent(e.target.value)} />
+                  <Label>Course syllabus / topics / content / software</Label>
+                  {renderCourseContentEditor(courseContentConfig, setCourseContentConfig)}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -960,7 +1051,18 @@ const AdminPanel = ({ activeTab, allowedTabs, onTabChange }: AdminPanelProps = {
                       <span className="ml-2 text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">{course.short_code}</span>
                     )}
                   </h4>
-                  <p className="text-sm text-muted-foreground">Rs. {course.price.toLocaleString()} · {course.total_weeks} weeks · {(course.course_content || []).length} topics</p>
+                  <p className="text-sm text-muted-foreground">
+                    Rs. {course.price.toLocaleString()} · {course.total_weeks} weeks · {parseCourseContent(course.course_content).items.length} items · {parseCourseContent(course.course_content).items.filter((item) => item.requirement === "elective").length} electives
+                  </p>
+                  {parseCourseContent(course.course_content).items.slice(0, 4).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {parseCourseContent(course.course_content).items.slice(0, 4).map((item) => (
+                        <span key={item.id} className="text-xs rounded border border-border px-2 py-0.5 text-muted-foreground">
+                          {courseContentKindLabel(item.kind)} · {item.requirement}: {item.title}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <Button variant="outline" size="sm" onClick={() => handleEditCourse(course)} className="gap-1">
                   <Settings className="h-3 w-3" /> Edit
