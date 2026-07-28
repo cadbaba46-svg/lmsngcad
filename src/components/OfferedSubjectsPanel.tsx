@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { CheckCircle, Loader2, BookOpen } from "lucide-react";
+import { courseContentKindLabel, parseCourseContent } from "@/lib/courseContent";
 
 interface Course {
   id: string;
@@ -11,7 +12,7 @@ interface Course {
   description: string | null;
   price: number;
   total_weeks: number;
-  course_content: string[] | null;
+  course_content: unknown;
 }
 
 const OfferedSubjectsPanel = () => {
@@ -56,6 +57,7 @@ const OfferedSubjectsPanel = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {courses.map((c) => {
           const enrolled = enrolledIds.has(c.id);
+          const contentConfig = parseCourseContent(c.course_content);
           return (
             <div key={c.id} className="bg-card border border-border rounded-lg p-5 space-y-3">
               <div className="flex items-center gap-2">
@@ -71,10 +73,12 @@ const OfferedSubjectsPanel = () => {
                   {enrolling === c.id ? "Enrolling…" : "Enroll now"}
                 </Button>
               )}
-              {c.course_content && c.course_content.length > 0 && (
+              {contentConfig.items.length > 0 && (
                 <ul className="pt-2 border-t border-border space-y-1">
-                  {c.course_content.slice(0, 5).map((item, i) => (
-                    <li key={i} className="text-xs text-muted-foreground">• {item}</li>
+                  {contentConfig.items.slice(0, 5).map((item) => (
+                    <li key={item.id} className="text-xs text-muted-foreground">
+                      • {courseContentKindLabel(item.kind)} · {item.requirement}: {item.title}
+                    </li>
                   ))}
                 </ul>
               )}

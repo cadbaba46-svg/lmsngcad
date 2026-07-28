@@ -25,6 +25,7 @@ import MandatoryLectureGate from "@/components/MandatoryLectureGate";
 import LMSAuthenticatorGate from "@/components/LMSAuthenticatorGate";
 import DepartmentTimeTablePanel from "@/components/DepartmentTimeTablePanel";
 import StudentTimeTablePanel from "@/components/StudentTimeTablePanel";
+import ElectiveCourseSelectionPanel from "@/components/ElectiveCourseSelectionPanel";
 import ngcadLogo from "@/assets/ngcad-logo.png";
 import { LogOut } from "lucide-react";
 import { Helmet } from "react-helmet-async";
@@ -179,6 +180,8 @@ const Dashboard = () => {
         return <DepartmentTimeTablePanel />;
       case "student-timetable":
         return <StudentTimeTablePanel />;
+      case "elective-selection":
+        return <ElectiveCourseSelectionPanel />;
       case "teacher-courses":
         return <TeacherCoursesPanel />;
       case "teacher-students":

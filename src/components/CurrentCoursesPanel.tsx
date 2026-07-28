@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import StudentTeacherChat from "@/components/StudentTeacherChat";
 import { formatAttendanceCount, getAttendanceStats } from "@/lib/attendance";
+import { courseContentKindLabel, parseCourseContent } from "@/lib/courseContent";
 
 interface Enrollment {
   id: string;
@@ -25,7 +26,7 @@ interface Enrollment {
     price: number;
     description: string;
     total_weeks: number;
-    course_content: string[];
+    course_content: unknown;
   };
 }
 
@@ -126,6 +127,9 @@ const CurrentCoursesPanel = () => {
         {enrollments.map((enrollment) => {
           const course = enrollment.courses;
           const attendance = getAttendanceStats(enrollment.attendance, course.total_weeks);
+          const contentConfig = parseCourseContent(course.course_content);
+          const compulsoryItems = contentConfig.items.filter((item) => item.requirement === "compulsory");
+          const electiveItems = contentConfig.items.filter((item) => item.requirement === "elective");
 
           return (
             <div
@@ -182,14 +186,33 @@ const CurrentCoursesPanel = () => {
               {enrollment.challan_paid && (
                 <div className="border-t border-border pt-3">
                   <p className="text-sm font-semibold text-foreground mb-2">Course Content</p>
-                  <ul className="space-y-1">
-                    {(course.course_content || []).map((item, i) => (
-                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                        <CheckCircle className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+                  {contentConfig.items.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No syllabus/content added yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {compulsoryItems.length > 0 && (
+                        <ul className="space-y-1">
+                          {compulsoryItems.map((item) => (
+                            <li key={item.id} className="text-sm text-muted-foreground flex items-start gap-2">
+                              <CheckCircle className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
+                              <span><span className="font-medium text-foreground">{courseContentKindLabel(item.kind)}:</span> {item.title}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {electiveItems.length > 0 && (
+                        <div className="rounded-md border border-border p-3 bg-muted/30">
+                          <p className="text-xs font-semibold text-foreground mb-1">Elective content</p>
+                          <p className="text-xs text-muted-foreground mb-2">Select {contentConfig.elective_required_count} required item{contentConfig.elective_required_count === 1 ? "" : "s"} from Elective Course Selection.</p>
+                          <ul className="space-y-1">
+                            {electiveItems.map((item) => (
+                              <li key={item.id} className="text-xs text-muted-foreground">• {courseContentKindLabel(item.kind)}: {item.title}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
