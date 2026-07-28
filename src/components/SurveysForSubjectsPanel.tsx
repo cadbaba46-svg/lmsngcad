@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ClipboardList, CheckCircle2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { SURVEY_QUESTIONS, RATING_LEGEND } from "@/lib/surveyQuestions";
+import { parseCourseContent } from "@/lib/courseContent";
 
 interface Row {
   enrollment_id: string;
@@ -68,7 +69,7 @@ const SurveysForSubjectsPanel = () => {
       const totalWeeks = e.courses?.total_weeks || 0;
       const attendanceCount = Array.isArray(e.attendance) ? e.attendance.length : 0;
       const attPct = totalWeeks > 0 ? (attendanceCount / totalWeeks) * 100 : 0;
-      const contentItems = Array.isArray(e.courses?.course_content) ? e.courses.course_content.length : 0;
+      const contentItems = parseCourseContent(e.courses?.course_content).items.length;
       // Content completion tracking not yet implemented per-student; fall back to attendance only.
       const progress = contentItems > 0 ? Math.round((attPct + attPct) / 2) : Math.round(attPct);
       return {
