@@ -21,6 +21,7 @@ import ComplaintsPanel from "@/components/ComplaintsPanel";
 import ViewDMCPanel from "@/components/ViewDMCPanel";
 import CourseTrackPanel from "@/components/CourseTrackPanel";
 import TeacherEvaluationsPanel from "@/components/TeacherEvaluationsPanel";
+import TeacherResultSheetPanel from "@/components/TeacherResultSheetPanel";
 import MandatoryLectureGate from "@/components/MandatoryLectureGate";
 import LMSAuthenticatorGate from "@/components/LMSAuthenticatorGate";
 import DepartmentTimeTablePanel from "@/components/DepartmentTimeTablePanel";
@@ -190,6 +191,8 @@ const Dashboard = () => {
         return <TeacherAttendancePanel />;
       case "teacher-evaluations":
         return <TeacherEvaluationsPanel />;
+      case "teacher-result-sheet":
+        return <TeacherResultSheetPanel />;
       default:
         return (
           <div className="p-6 text-muted-foreground flex items-center justify-center min-h-[300px]">

@@ -83,6 +83,7 @@ const teacherSections: SidebarSection[] = [
       { label: "Student Details", id: "teacher-students" },
       { label: "Attendance", id: "teacher-attendance" },
       { label: "Mark Evaluations", id: "teacher-evaluations" },
+      { label: "Result Sheet", id: "teacher-result-sheet" },
     ],
   },
 ];
