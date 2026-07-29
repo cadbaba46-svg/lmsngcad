@@ -800,6 +800,110 @@ export type Database = {
         }
         Relationships: []
       }
+      result_sheet_marks: {
+        Row: {
+          created_at: string
+          enrollment_id: string
+          grade: string | null
+          id: string
+          marks: Json
+          result_sheet_id: string
+          total_obtained: number
+          updated_at: string
+          user_id: string
+          weighted_score: number
+        }
+        Insert: {
+          created_at?: string
+          enrollment_id: string
+          grade?: string | null
+          id?: string
+          marks?: Json
+          result_sheet_id: string
+          total_obtained?: number
+          updated_at?: string
+          user_id: string
+          weighted_score?: number
+        }
+        Update: {
+          created_at?: string
+          enrollment_id?: string
+          grade?: string | null
+          id?: string
+          marks?: Json
+          result_sheet_id?: string
+          total_obtained?: number
+          updated_at?: string
+          user_id?: string
+          weighted_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "result_sheet_marks_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_sheet_marks_result_sheet_id_fkey"
+            columns: ["result_sheet_id"]
+            isOneToOne: false
+            referencedRelation: "result_sheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      result_sheets: {
+        Row: {
+          assessments: Json
+          comments: string | null
+          course_id: string
+          created_at: string
+          id: string
+          session_label: string | null
+          status: string
+          submitted_at: string | null
+          teacher_id: string
+          thresholds: Json
+          updated_at: string
+        }
+        Insert: {
+          assessments?: Json
+          comments?: string | null
+          course_id: string
+          created_at?: string
+          id?: string
+          session_label?: string | null
+          status?: string
+          submitted_at?: string | null
+          teacher_id: string
+          thresholds?: Json
+          updated_at?: string
+        }
+        Update: {
+          assessments?: Json
+          comments?: string | null
+          course_id?: string
+          created_at?: string
+          id?: string
+          session_label?: string | null
+          status?: string
+          submitted_at?: string | null
+          teacher_id?: string
+          thresholds?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "result_sheets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: true
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_teacher_messages: {
         Row: {
           ciphertext: string
